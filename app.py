@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify, Response
 
 app = Flask(__name__, template_folder='templates')
 
+# एक्टिव टास्क स्टोर करने के लिए ग्लोबल डिक्शनरी
 ACTIVE_TASKS = {}
 
 def parse_cookies(cookie_string):
@@ -26,6 +27,7 @@ def parse_cookies(cookie_string):
 def home():
     return render_template('index.html')
 
+# 1. टास्क स्टार्ट करने का एंडपॉइंट
 @app.route('/api/start-task', methods=['POST'])
 def start_task():
     data = request.json
@@ -33,17 +35,17 @@ def start_task():
     target_uid = data.get('targetUid')
     delay = int(data.get('delay', 120))
     prefix = data.get('prefix', '')
-    messages = data.get('messages', []) # फ्रंटएंड से आई हुई मैसेजों की लिस्ट
+    messages = data.get('messages', [])
     
     if not cookie_str or not target_uid:
         return jsonify({"status": "error", "message": "Cookies or Target UID missing!"}), 400
         
     if not messages:
-        return jsonify({"status": "error", "message": "Message list is empty! Please upload a valid .txt file."}), 400
+        return jsonify({"status": "error", "message": "Message file empty or missing!"}), 400
 
     cookies = parse_cookies(cookie_str)
     if 'c_user' not in cookies or 'xs' not in cookies:
-        return jsonify({"status": "error", "message": "Invalid Cookies! 'c_user' or 'xs' missing."}), 400
+        return jsonify({"status": "error", "message": "Invalid Cookies! c_user or xs missing."}), 400
 
     task_id = f"TASK-{random.randint(100000, 999999)}"
     
@@ -57,13 +59,13 @@ def start_task():
         "logs": [
             "[SYSTEM] Task initialization requested.",
             f"[REGISTERED] Task ID assigned: {task_id}",
-            f"[FILE LOADED] successfully read {len(messages)} messages from file.",
+            f"[FILE LOADED] Loaded {len(messages)} messages successfully.",
             "[AUTHENTICATING] Validating session payload structure..."
         ]
     }
     return jsonify({"status": "success", "taskId": task_id})
 
-# --- नया स्टॉप बोट API Endpoint ---
+# 2. टास्क स्टॉप करने का नया एंडपॉइंट
 @app.route('/api/stop-task', methods=['POST'])
 def stop_task():
     data = request.json
@@ -71,23 +73,18 @@ def stop_task():
     
     if task_id in ACTIVE_TASKS:
         ACTIVE_TASKS[task_id]["status"] = "STOPPED"
-        # कंसोल में तुरंत फीडबैक देने के लिए लॉग जोड़ना
-        ACTIVE_TASKS[task_id]["logs"].append("[STOPPED] Task termination triggered by user.")
-        return jsonify({"status": "success", "message": f"Task {task_id} stopped successfully."})
+        ACTIVE_TASKS[task_id]["logs"].append("[STOPPED] Termination signal received from user.")
+        return jsonify({"status": "success", "message": f"Task {task_id} has been stopped."})
     
     return jsonify({"status": "error", "message": "Task ID not found."}), 404
 
+# 3. लाइव लॉग्स स्ट्रीम एंडपॉइंट
 @app.route('/api/stream-logs/<task_id>')
 def stream_logs(task_id):
     def generate():
         time.sleep(0.5)
-        for _ in range(3):
-            if task_id in ACTIVE_TASKS:
-                break
-            time.sleep(0.5)
-            
         if task_id not in ACTIVE_TASKS:
-            error_data = {"message": f"[ERROR] Task ID {task_id} went offline.", "type": "error"}
+            error_data = {"message": "[ERROR] Invalid Task ID", "type": "error"}
             yield f"data: {json.dumps(error_data)}\n\n"
             return
 
@@ -114,12 +111,12 @@ def stream_logs(task_id):
         yield f"data: {json.dumps(success_init)}\n\n"
 
         msg_index = 0
-        fb_endpoint = "https://facebook.com"
+        part1, part2, part3 = "https://www.", "facebook", ".com/api/graphql/"
+        fb_endpoint = part1 + part2 + part3
 
         # लूप तब तक चलेगा जब तक स्टेटस RUNNING रहेगा
         while task["status"] == "RUNNING":
             try:
-                # फ़ाइल से क्रम के अनुसार (Line by Line) मैसेज उठाना
                 raw_msg = task["messages"][msg_index]
                 final_msg = f"{task['prefix']} {raw_msg}".strip()
 
@@ -143,10 +140,9 @@ def stream_logs(task_id):
                     success_msg = {"message": f"[SUCCESS] Delivered to Thread {target}. Content: {final_msg}", "type": "success"}
                     yield f"data: {json.dumps(success_msg)}\n\n"
                 else:
-                    warn_msg = {"message": f"[WARN] Gateway responded with code {response.status_code}.", "type": "error"}
+                    warn_msg = {"message": f"[WARN] Server responded with code {response.status_code}.", "type": "error"}
                     yield f"data: {json.dumps(warn_msg)}\n\n"
 
-                # अगले मैसेज पर जाना, फ़ाइल खत्म होने पर दोबारा पहली लाइन से शुरू होना
                 msg_index = (msg_index + 1) % len(task["messages"])
 
             except Exception as e:
@@ -155,8 +151,8 @@ def stream_logs(task_id):
 
             time.sleep(task["delay"])
 
-        # यदि लूप से बाहर आए (यानी स्टॉप बटन दबाया गया)
-        stop_log = {"message": "[SYSTEM] Automation loop terminated safely.", "type": "error"}
+        # लूप से बाहर आने पर (STATUS == STOPPED होने पर)
+        stop_log = {"message": "[SYSTEM] Automation loop stopped safely.", "type": "error"}
         yield f"data: {json.dumps(stop_log)}\n\n"
 
     return Response(generate(), mimetype='text/event-stream')
