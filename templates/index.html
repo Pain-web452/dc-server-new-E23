@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Automation Bot</title>
+    <style>
+        body { background-color: #fff0f5; color: #333; font-family: Arial, sans-serif; padding: 15px; margin: 0; }
+        .container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #d63384; font-size: 20px; text-align: center; margin-bottom: 2px; }
+        .dev-by { text-align: center; font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; margin-bottom: 15px; }
+        .badge { background-color: #e6f7ed; color: #1e7e34; border: 1px solid #c3e6cb; border-radius: 6px; padding: 10px; font-size: 11px; text-align: center; margin-bottom: 20px; line-height: 1.4; }
+        label { display: block; font-size: 12px; font-weight: bold; margin-top: 12px; margin-bottom: 5px; color: #444; }
+        input[type="text"], input[type="number"], textarea, input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 13px; background-color: #fafafa; }
+        textarea { height: 70px; resize: none; }
+        .btn-check { background-color: #00a86b; color: white; border: none; width: 100%; padding: 10px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; font-size: 12px; text-transform: uppercase; }
+        .btn-start { background-color: #d63384; color: white; border: none; width: 100%; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 15px; font-size: 13px; text-transform: uppercase; }
+        .monitor-box { border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin-top: 25px; background-color: white; }
+        .monitor-title { font-weight: bold; color: #333; font-size: 14px; margin-bottom: 10px; }
+        .task-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+        .btn-view { background-color: #6f42c1; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .btn-stop { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-decoration: none;}
+        .status-grid { display: flex; gap: 15px; margin-bottom: 15px; }
+        .status-card { border: 1px solid #eee; border-radius: 6px; padding: 8px; flex: 1; font-size: 11px; color: #666; }
+        .status-val { font-size: 14px; font-weight: bold; margin-top: 4px; }
+        .status-green { color: #28a745; }
+        .status-red { color: #dc3545; }
+        .log-terminal { background-color: #0a1118; color: #28a745; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; height: 180px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Messenger Automation Bot</h2>
+        <div class="dev-by">DEVELOPED BY : RAJ MISHRA</div>
+        
+        <div class="badge">
+            ♻️ 24/7 Render Anti-Sleep Mode | 950MB Safe | Live Task Monitor Active
+        </div>
+
+        <form action="/start-automation" method="POST" enctype="multipart/form-data">
+            <label>Messenger Cookie String:</label>
+            <textarea name="cookieString" placeholder="c_user=...; xs=...; datr=...;" required></textarea>
+            
+            <button type="button" class="btn-check">🔍 CHECK COOKIES</button>
+
+            <label>Target UID / Thread ID:</label>
+            <input type="text" name="threadId" placeholder="e.g. 1000XXXXXXXXXXX" required>
+
+            <label>E2EE 6-Digit PIN (Optional):</label>
+            <input type="text" name="e2eePin" placeholder="e.g. 123456">
+
+            <label>Message Prefix (Optional):</label>
+            <input type="text" name="messagePrefix" placeholder="e.g. [RAJ]">
+
+            <label>Messages (.txt File):</label>
+            <input type="file" name="messageFile" required>
+
+            <label>Delay (In Seconds):</label>
+            <input type="number" name="delay" value="120" required>
+
+            <button type="submit" class="btn-start">START TASK</button>
+        </form>
+
+        <!-- LIVE TASK MONITOR -->
+        <div class="monitor-box">
+            <div class="monitor-title">📊 Task Monitor</div>
+            <div class="task-controls">
+                <span style="font-size: 12px; color: #555;">Task ID:</span>
+                <input type="text" value="TASK-2" style="width: 80px; padding: 4px; margin: 0; font-size: 11px; text-align: center;" readonly>
+                <button type="button" class="btn-view">VIEW</button>
+                <a href="/stop-automation" class="btn-stop">STOP</a>
+            </div>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    STATUS
+                    <div class="status-val status-green" id="status-text">Ready</div>
+                </div>
+                <div class="status-card">
+                    SERVER UPTIME
+                    <div class="status-val status-red" id="uptime-text">Live & Online</div>
+                </div>
+            </div>
+
+            <div class="log-terminal" id="log-screen">Waiting for task to launch... Connected to Render Server.</div>
+        </div>
+    </div>
+
+    <script>
+        function updateMonitor() {
+            fetch('/get-logs')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.running) {
+                        document.getElementById('status-text').innerText = "Running";
+                        document.getElementById('status-text').className = "status-val status-green";
+                        document.getElementById('log-screen').innerText = data.logs.join('\n\n');
+                    } else {
+                        document.getElementById('status-text').innerText = "Stopped/Ready";
+                        document.getElementById('status-text').className = "status-val status-red";
+                    }
+                });
+        }
+        setInterval(updateMonitor, 2000); // Har 2 second me auto refresh logs
+    </script>
+</body>
+</html>
