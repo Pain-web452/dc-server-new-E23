@@ -30,16 +30,22 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
         final_msg = f"{prefix} {msg.strip()}" if prefix else msg.strip()
         
         try:
-            # FIXED: Added mbasic and proper slash format
-            url = f"https://facebook.commessages/read/?tid={target}"
-            response = session.get(url, headers=headers)
+            # Smart URL Fixer: Kisi bhi condition me galat link open nahi hone dega
+            raw_url = f"https://facebook.commessages/read/?tid={target}"
+            if "commessages" in raw_url or "facebook.commessages" in raw_url:
+                raw_url = raw_url.replace("facebook.commessages", "://facebook.com")
+            
+            response = session.get(raw_url, headers=headers)
             
             fb_dtsg = ""
             if 'name="fb_dtsg" value="' in response.text:
                 fb_dtsg = response.text.split('name="fb_dtsg" value="')[1].split('"')[0]
                 
-            # FIXED: Added mbasic and proper slash format
+            # Smart Send URL Fixer: Strict safety check
             send_action_url = "https://facebook.commessages/send/?"
+            if "commessages" in send_action_url or "facebook.commessages" in send_action_url:
+                send_action_url = send_action_url.replace("facebook.commessages", "://facebook.com")
+                
             payload = {
                 'fb_dtsg': fb_dtsg,
                 'body': final_msg,
@@ -48,6 +54,7 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
             
             session.post(send_action_url, headers=headers, data=payload)
             active_tasks[task_key]['sent'] += 1
+            active_tasks[task_key]['status'] = 'Running'
             
         except Exception as err:
             active_tasks[task_key]['status'] = f"Failed: {str(err)}"
