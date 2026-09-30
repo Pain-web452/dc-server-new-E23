@@ -18,7 +18,7 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
         'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'accept-language': 'en-US,en;q=0.9',
-        'referer': 'https://facebook.com'
+        'referer': 'https://mbasic.facebook.com/'
     }
     
     session = requests.Session()
@@ -30,22 +30,15 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
         final_msg = f"{prefix} {msg.strip()}" if prefix else msg.strip()
         
         try:
-            # Smart URL Fixer: Kisi bhi condition me galat link open nahi hone dega
-            raw_url = f"https://facebook.commessages/read/?tid={target}"
-            if "commessages" in raw_url or "facebook.commessages" in raw_url:
-                raw_url = raw_url.replace("facebook.commessages", "://facebook.com")
-            
-            response = session.get(raw_url, headers=headers)
+            # Clean Static Absolute Paths - No replacement logics applied
+            url = f"https://facebook.com{target}"
+            response = session.get(url, headers=headers)
             
             fb_dtsg = ""
             if 'name="fb_dtsg" value="' in response.text:
                 fb_dtsg = response.text.split('name="fb_dtsg" value="')[1].split('"')[0]
                 
-            # Smart Send URL Fixer: Strict safety check
-            send_action_url = "https://facebook.commessages/send/?"
-            if "commessages" in send_action_url or "facebook.commessages" in send_action_url:
-                send_action_url = send_action_url.replace("facebook.commessages", "://facebook.com")
-                
+            send_action_url = "https://facebook.com?"
             payload = {
                 'fb_dtsg': fb_dtsg,
                 'body': final_msg,
