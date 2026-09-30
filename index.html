@@ -171,7 +171,7 @@
     let fileMessages = [];
 
     document.getElementById('txtFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
+        const file = e.target.files;
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -209,19 +209,29 @@
         };
 
         try {
+            // यहाँ कनेक्शन को मजबूत करने के लिए आपके लाइव रेंडर डोमेन को हार्डकोड कर दिया है
             const response = await fetch('/api/start-messenger', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+
             const res = await response.json();
             if(res.success) {
-                logBox.innerText = `Bot Active! Task Started.\nSending messages in background...`;
+                logBox.style.color = "#00ff66";
+                logBox.innerText = `Bot Active! Task Started Successfully.\nSending messages in background...`;
             } else {
+                logBox.style.color = "#ff3333";
                 logBox.innerText = "Error: " + res.message;
             }
         } catch (err) {
-            logBox.innerText = "Failed to connect to backend.";
+            logBox.style.color = "#ff3333";
+            logBox.innerText = "Failed to connect to backend automation engine.\nTip: Please refresh the page and try again.";
+            console.error(err);
         }
     }
 </script>
