@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Automation Bot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffeef2;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
+        }
+        .title {
+            color: #d81b60;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+        .badge-info {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #444;
+            display: block;
+            margin-bottom: 8px;
+        }
+        input[type="text"], input[type="number"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ffccd5;
+            border-radius: 10px;
+            box-sizing: border-box;
+            background-color: #fff9fa;
+            font-size: 14px;
+            color: #333;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #d81b60;
+            background-color: #fff;
+        }
+        .btn-green {
+            background-color: #00875a;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        .file-input-container {
+            border: 1px solid #ffccd5;
+            padding: 10px;
+            border-radius: 10px;
+            background-color: #fff9fa;
+        }
+        .btn-submit {
+            background-color: #e91e63;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 14px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            box-shadow: 0 4px 10px rgba(233,30,99,0.3);
+        }
+        .terminal {
+            background-color: #1a1a1a;
+            color: #00ff66;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            margin-top: 20px;
+            min-height: 60px;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="title">Messenger Automation Bot</div>
+    <div class="subtitle">DEVELOPED BY : RAJ MISHRA</div>
+
+    <div class="badge-info">
+        ♻️ 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin
+    </div>
+
+    <div class="form-group">
+        <label>Messenger Cookie String:</label>
+        <textarea id="cookieStr" rows="3" placeholder="c_user=...; xs=...; datr=...;"></textarea>
+    </div>
+
+    <button class="btn-green" onclick="checkCookies()">🔍 Check Cookies</button>
+
+    <div class="form-group">
+        <label>Target UID / Thread ID:</label>
+        <input type="text" id="targetId" placeholder="e.g. 1000XXXXXXXXXXX">
+    </div>
+
+    <div class="form-group">
+        <label>E2EE 6-Digit PIN (Optional):</label>
+        <input type="text" id="e2eePin" placeholder="e.g. 123456">
+    </div>
+
+    <div class="form-group">
+        <label>Message Prefix (Optional):</label>
+        <input type="text" id="prefix" placeholder="e.g. [RAJ]">
+    </div>
+
+    <div class="form-group">
+        <label>Messages (.txt File):</label>
+        <div class="file-input-container">
+            <input type="file" id="txtFile" accept=".txt">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Delay (In Seconds):</label>
+        <input type="number" id="delay" value="120">
+    </div>
+
+    <button class="btn-submit" onclick="startBot()">🚀 Start Messenger Bot</button>
+
+    <div class="terminal" id="logBox">Status: System Idle...</div>
+</div>
+
+<script>
+    let fileMessages = [];
+
+    document.getElementById('txtFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            fileMessages = e.target.result.split('\n').map(m => m.trim()).filter(m => m !== "");
+            document.getElementById('logBox').innerText = `File Loaded: ${fileMessages.length} messages found.`;
+        };
+        reader.readAsText(file);
+    });
+
+    function checkCookies() {
+        const cookie = document.getElementById('cookieStr').value;
+        if(!cookie) return alert("Please paste cookies first!");
+        document.getElementById('logBox').innerText = "Cookie format checked. Ready to start.";
+    }
+
+    async function startBot() {
+        const logBox = document.getElementById('logBox');
+        const cookie = document.getElementById('cookieStr').value;
+        const targetId = document.getElementById('targetId').value;
+        const delay = document.getElementById('delay').value;
+
+        if(!cookie || !targetId || fileMessages.length === 0) {
+            return alert("Please fill Cookie, Target ID and Upload a .txt file!");
+        }
+
+        logBox.innerText = "Initializing Messenger Bot Session...";
+
+        const payload = {
+            cookie: cookie,
+            targetId: targetId,
+            pin: document.getElementById('e2eePin').value,
+            prefix: document.getElementById('prefix').value,
+            messages: fileMessages,
+            delay: parseInt(delay) * 1000
+        };
+
+        try {
+            const response = await fetch('/api/start-messenger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const res = await response.json();
+            if(res.success) {
+                logBox.innerText = `Bot Active! Task Started.\nSending messages in background...`;
+            } else {
+                logBox.innerText = "Error: " + res.message;
+            }
+        } catch (err) {
+            logBox.innerText = "Failed to connect to backend.";
+        }
+    }
+</script>
+</body>
+</html>
