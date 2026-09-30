@@ -3,152 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Automation Tool</title>
-    <!-- Bootstrap CSS for clean design -->
+    <title>Task Monitor Dashboard</title>
     <link href="https://jsdelivr.net" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: none; margin-bottom: 20px; }
-        .btn-primary { background-color: #0084ff; border: none; }
-        .btn-primary:hover { background-color: #0066cc; }
-        .badge-running { background-color: #28a745; }
-        .badge-stopped { background-color: #dc3545; }
-        .badge-completed { background-color: #007bff; }
+        body { background-color: #ffdceb; font-family: Arial, sans-serif; }
+        .wrapper { max-width: 500px; margin: 20px auto; padding: 10px; }
+        
+        /* फॉर्म कार्ड और बटन स्टाइल्स */
+        .config-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .btn-start-task { background-color: #e91e63; color: white; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 8px; text-transform: uppercase; font-size: 15px; }
+        .btn-start-task:hover { background-color: #c2185b; }
+        
+        /* नया टास्क मॉनिटर मुख्य बॉक्स */
+        .monitor-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #fbc2eb; }
+        .monitor-title { font-size: 18px; font-weight: bold; color: #d81b60; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        
+        /* टास्क कंट्रोलर लाइन (Task ID, View, Stop) */
+        .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 8px; }
+        .task-id-box { border: 1px solid #ced4da; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #333; font-size: 14px; background: #f8f9fa; flex: 1; text-align: center; }
+        .btn-view { background-color: #7e57c2; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; text-transform: uppercase; }
+        .btn-stop { background-color: #ef5350; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; text-transform: uppercase; }
+        
+        /* स्टेटस और अपटाइम ग्रिड */
+        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .status-box { border: 1px solid #f1f1f1; border-radius: 12px; padding: 12px; background: #fff; box-shadow: inset 0 0 5px rgba(0,0,0,0.02); }
+        .status-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        
+        .status-indicator { font-size: 18px; font-weight: bold; color: #2e7d32; display: flex; flex-direction: column; align-items: flex-start; }
+        .status-dot { width: 10px; height: 10px; background-color: #26a69a; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 0 8px #26a69a; }
+        .uptime-value { font-size: 16px; font-weight: bold; color: #c2185b; line-height: 1.2; }
+        
+        /* स्क्रीनशॉट जैसा ब्लैक टर्मिनल बॉक्स */
+        .terminal-box { background-color: #111b21; border-radius: 12px; padding: 15px; height: 260px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #e1e1e1; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); border: 1px solid #233138; }
+        .log-line { margin-bottom: 12px; line-height: 1.4; border-bottom: 1px solid #1f2c33; padding-bottom: 8px; }
+        .log-time { color: #8496a0; font-weight: bold; }
+        .log-success { color: #00e676; font-weight: bold; }
+        .log-msg { color: #00e5ff; font-weight: 500; font-style: italic; display: block; margin-top: 2px; }
     </style>
 </head>
 <body>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <!-- Form Column -->
-        <div class="col-md-6">
-            <div class="card p-4">
-                <h3 class="text-center mb-4">💬 Messenger Automation</h3>
-                
-                <form action="/start" method="POST" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label class="form-label">Facebook Cookie:</label>
-                        <input type="text" name="cookie" class="form-control" placeholder="Paste your fb cookie here" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Target (Inbox URL or Thread ID):</label>
-                        <input type="text" name="target" class="form-control" placeholder="https://facebook.com..." required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Message Prefix / Hater Name (Optional):</label>
-                        <input type="text" name="prefix" class="form-control" placeholder="e.g. Brand">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Delay between messages (Seconds):</label>
-                        <input type="number" name="delay" class="form-control" value="120" min="5" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Upload Message File (.txt):</label>
-                        <input type="file" name="message_file" class="form-control" accept=".txt" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">START AUTOMATION PROCESS</button>
-                </form>
+<div class="wrapper">
+    <!-- इनपुट सेटिंग्स फॉर्म -->
+    <div class="config-card">
+        <h5 class="text-center mb-3" style="color:#c2185b; font-weight:bold;">⚙️ Bot Configuration</h5>
+        <form action="/start" method="POST" enctype="multipart/form-data">
+            <div class="mb-2">
+                <input type="text" name="cookie" class="form-control" placeholder="Cookie String" required>
             </div>
-        </div>
+            <div class="mb-2">
+                <input type="text" name="target" class="form-control" placeholder="Target Thread ID" required>
+            </div>
+            <div class="mb-2">
+                <input type="text" name="prefix" class="form-control" placeholder="Prefix (Optional)">
+            </div>
+            <div class="mb-2">
+                <input type="password" name="pin" class="form-control" placeholder="6-Digit PIN (Optional)">
+            </div>
+            <div class="mb-2">
+                <input type="file" name="message_file" class="form-control" accept=".txt" required>
+            </div>
+            <div class="mb-3">
+                <input type="number" name="delay" class="form-control" value="120">
+            </div>
+            <button type="submit" class="btn-start-task">START TASK</button>
+        </form>
+    </div>
 
-        <!-- Live Monitor Column -->
-        <div class="col-md-6">
-            <div class="card p-4">
-                <h4 class="mb-3">📊 Live Task Monitor</h4>
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Target ID</th>
-                                <th>Sent / Total</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="task-table-body">
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No active tasks tracking.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    <!-- स्क्रीनशॉट के जैसा सेम टू सेम लाइव टास्क मॉनिटर कार्ड -->
+    <div id="all-tasks-container">
+        <!-- डिफ़ॉल्ट खाली स्टेट -->
+        <div class="monitor-card text-center text-muted">No active tasks running at the moment.</div>
     </div>
 </div>
 
-<!-- Live Real-time Update Script -->
 <script>
-    // हर 2 सेकंड में बैकएंड से टास्क स्टेटस फेच करने का फंक्शन (View Code Implementation)
-    async function updateTaskStatus() {
+    async function refreshDashboard() {
         try {
             const response = await fetch('/status');
-            const tasks = await response.json();
-            const tbody = document.getElementById('task-table-body');
+            const data = await response.json();
+            const container = document.getElementById('all-tasks-container');
             
-            if (Object.keys(tasks).length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No active tasks tracking.</td></tr>`;
+            if (Object.keys(data.tasks).length === 0) {
+                container.innerHTML = `<div class="monitor-card text-center text-muted">No active tasks running at the moment.</div>`;
                 return;
             }
             
             let htmlContent = '';
-            for (const [targetId, task] of Object.entries(tasks)) {
-                let badgeClass = 'bg-secondary';
-                if (task.status === 'Running') badgeClass = 'badge-running';
-                else if (task.status === 'Stopped') badgeClass = 'badge-stopped';
-                else if (task.status === 'Completed') badgeClass = 'badge-completed';
-                
-                // स्टॉप बटन तभी दिखेगा जब टास्क चल रहा (Running) हो
-                let actionButton = '';
-                if (task.status === 'Running') {
-                    actionButton = `<button class="btn btn-danger btn-sm fw-bold" onclick="stopTask('${targetId}')">Stop</button>`;
+            
+            for (const [taskId, task] of Object.entries(data.tasks)) {
+                // टर्मिनल लॉग्स को उल्टा करके दिखाना ताकि नया मैसेज ऊपर या सही क्रम में दिखे
+                let logHtml = '';
+                if (task.logs && task.logs.length > 0) {
+                    task.logs.slice().reverse().forEach(log => {
+                        // लॉग लाइन्स को सुंदर फॉर्मेट देना
+                        let formattedLog = log
+                            .replace('[', '<span class="log-time">[')
+                            .replace(']', ']</span>')
+                            .replace('✅ Sent:', '<span class="log-success">✅ Sent:</span>')
+                            .replace(/"([^"]+)"/g, '<span class="log-msg">"\$1"</span>');
+                        
+                        logHtml += `<div class="log-line">${formattedLog}</div>`;
+                    });
                 } else {
-                    actionButton = `<button class="btn btn-secondary btn-sm" disabled>Inactive</button>`;
+                    logHtml = `<div class="text-muted text-center pt-5">Waiting for logs...</div>`;
                 }
 
+                // स्टेटस डॉट का रंग बदलना
+                let dotColor = task.status === 'Running' ? '#26a69a' : '#ef5350';
+                let statusTextColor = task.status === 'Running' ? '#2e7d32' : '#c62828';
+
                 htmlContent += `
-                    <tr>
-                        <td class="text-truncate" style="max-width: 120px;" title="${targetId}"><strong>${targetId}</strong></td>
-                        <td><span class="text-primary fw-bold">${task.sent}</span> / ${task.total}</td>
-                        <td><span class="badge ${badgeClass}">${task.status}</span></td>
-                        <td>${actionButton}</td>
-                    </tr>
+                    <div class="monitor-card mb-4">
+                        <div class="monitor-title">📊 Task Monitor</div>
+                        
+                        <!-- टास्क कंट्रोल पंक्ति -->
+                        <div class="control-row">
+                            <div class="task-id-box">${taskId}</div>
+                            <button class="btn-view">VIEW</button>
+                            <button class="btn-stop" onclick="stopCurrentTask('${taskId}')">STOP</button>
+                        </div>
+                        
+                        <!-- स्टेटस और लाइव अपटाइम ग्रिड -->
+                        <div class="status-grid">
+                            <div class="status-box">
+                                <div class="status-label">STATUS</div>
+                                <div class="status-indicator" style="color: ${statusTextColor};">
+                                    <span class="status-dot" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotColor};"></span>
+                                    ${task.status}
+                                </div>
+                            </div>
+                            <div class="status-box">
+                                <div class="status-label">UPTIME</div>
+                                <div class="uptime-value">${data.uptime}</div>
+                            </div>
+                        </div>
+                        
+                        <!-- ब्लैक टर्मिनल स्क्रीन लॉग्स -->
+                        <div class="terminal-box">
+                            ${logHtml}
+                        </div>
+                    </div>
                 `;
             }
-            tbody.innerHTML = htmlContent;
+            
+            container.innerHTML = htmlContent;
         } catch (error) {
-            console.error("Error fetching status:", error);
+            console.error("Dashboard refresh error:", error);
         }
     }
 
-    // बटन क्लिक होने पर टास्क को स्टॉप करने का फंक्शन (Task Stop Implementation)
-    async function stopTask(targetId) {
-        if (!confirm(`Are you sure you want to stop the task for ID: ${targetId}?`)) return;
-        
+    async function stopCurrentTask(taskId) {
+        if (!confirm(`Are you sure you want to STOP ${taskId}?`)) return;
         const formData = new FormData();
-        formData.append('target', targetId);
-        
+        formData.append('task_id', taskId);
         try {
-            const response = await fetch('/stop', {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            alert(result.message || result.error);
-            updateTaskStatus(); // तुरंत लिस्ट रिफ्रेश करें
-        } catch (error) {
-            console.error("Error stopping task:", error);
-        }
+            await fetch('/stop', { method: 'POST', body: formData });
+            refreshDashboard();
+        } catch (e) { console.error(e); }
     }
 
-    // पेज लोड होने पर इंटरवल शुरू करें
-    setInterval(updateTaskStatus, 2000);
-    window.onload = updateTaskStatus;
+    // हर 2 सेकंड में स्क्रीनशॉट की तरह डेटा ऑटो-अपडेट होगा
+    setInterval(refreshDashboard, 2000);
+    window.onload = refreshDashboard;
 </script>
 
 </body>
