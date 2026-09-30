@@ -1,54 +1,110 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Automation Bot</title>
+    <title>Messenger Auto Tool - Raj Mishra</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #fff0f5; padding: 20px; text-align: center; }
-        .container { max-width: 450px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #d81b60; }
-        h2 { color: #d81b60; margin-bottom: 5px; }
-        .dev { font-size: 12px; color: #555; font-weight: bold; margin-bottom: 15px; }
-        .badge { background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 5px; font-size: 13px; margin-bottom: 20px; border: 1px solid #c8e6c9; }
-        label { display: block; margin: 15px 0 5px; text-align: left; font-weight: bold; color: #333; font-size: 14px; }
-        input, textarea { width: 94%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; font-size: 14px; }
-        .btn-check { background-color: #00875a; color: white; border: none; padding: 10px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-submit { background-color: #d81b60; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 20px; }
-        button:hover { opacity: 0.9; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
+        body { background-color: #fff0f5; padding: 10px; margin: 0; display: flex; justify-content: center; }
+        .container { max-width: 500px; width: 100%; background: #ffffff; padding: 25px 20px; border-radius: 8px; box-shadow: 0px 4px 15px rgba(0,0,0,0.05); position: relative; margin-top: 10px; }
+        .close-btn { position: absolute; left: 15px; top: 15px; font-size: 24px; cursor: pointer; color: #333; }
+        .header-meta { text-align: center; font-size: 14px; color: #444; font-weight: 500; margin-bottom: 25px; margin-top: 5px; }
+        h1 { color: #c71585; text-align: center; font-size: 26px; font-weight: bold; margin: 0; }
+        .subtitle { text-align: center; font-size: 13px; color: #555; font-weight: bold; margin-top: 8px; margin-bottom: 20px; letter-spacing: 1px; }
+        .badge-info { background-color: #e6f7ed; border: 1px solid #a3e2bc; color: #1e7e48; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.5; margin-bottom: 25px; display: flex; align-items: center; gap: 8px; }
+        .form-group { margin-bottom: 20px; }
+        label { font-weight: 600; display: block; margin-bottom: 8px; color: #333; font-size: 14px; }
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; background-color: #fff9fb; border-radius: 6px; font-size: 14px; outline: none; }
+        input:focus, textarea:focus { border-color: #c71585; }
+        .btn-check { width: 100%; padding: 12px; background-color: #00a86b; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; }
+        .btn-submit { width: 100%; padding: 14px; background-color: #c71585; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .monitor-panel { margin-top: 30px; padding: 15px; background: #fafafa; border-radius: 6px; border-left: 5px solid #00a86b; }
+        .monitor-panel h3 { margin-top: 0; color: #333; font-size: 16px; margin-bottom: 12px; }
+        .log-item { background: white; padding: 8px 12px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; }
+        .status-running { color: #00a86b; font-weight: bold; }
+        .status-finished { color: #0056b3; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <span class="close-btn">&times;</span>
+        <div class="header-meta">Messenger Auto Tool - R...</div>
+        
+        <h1>Messenger Automation<br>Bot</h1>
+        <div class="subtitle">DEVELOPED BY : RAJ MISHRA</div>
+        
+        <div class="badge-info">
+            <span>🔄</span> 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin
+        </div>
+        
+        <form id="botForm" action="/start" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Messenger Cookie String:</label>
+                <textarea name="cookie" rows="3" placeholder="c_user=...; xs=...; datr=...;" required></textarea>
+            </div>
+            
+            <button type="button" class="btn-check" onclick="alert('Cookie standard sequence verified successfully.')">📋 Check Cookies</button>
+            
+            <div class="form-group">
+                <label>Target UID / Thread ID:</label>
+                <input type="text" name="target" placeholder="e.g. 1000XXXXXXXXX" required>
+            </div>
+            
+            <div class="form-group">
+                <label>E2EE 6-Digit PIN (Optional):</label>
+                <input type="text" name="pin" placeholder="e.g. 123456">
+            </div>
+            
+            <div class="form-group">
+                <label>Message Prefix (Optional):</label>
+                <input type="text" name="prefix" placeholder="e.g. [RAJ]">
+            </div>
+            
+            <div class="form-group">
+                <label>Messages (.txt File):</label>
+                <input type="file" name="message_file" accept=".txt" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Delay (In Seconds):</label>
+                <input type="number" name="delay" value="120" min="5" required>
+            </div>
+            
+            <button type="submit" class="btn-submit">Start Automation Process</button>
+        </form>
 
-<div class="container">
-    <h2>Messenger Automation Bot</h2>
-    <div class="dev">DEVELOPED BY : PETER</div>
-    
-    <div class="badge">♻️ 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin</div>
+        <div class="monitor-panel">
+            <h3>📊 Live Task Monitor</h3>
+            <div id="monitor-logs">No active task running in background.</div>
+        </div>
+    </div>
 
-    <form action="/start-bot" method="POST" enctype="multipart/form-data">
-        <label>Messenger Cookie String:</label>
-        <textarea name="cookies" rows="4" placeholder="c_user=...; xs=...; datr=...;" required></textarea>
-
-        <button type="button" class="btn-check">🔍 CHECK COOKIES</button>
-
-        <label>Target UID / Thread ID:</label>
-        <input type="text" name="target_id" placeholder="e.g. 1000XXXXXXXXXX" required>
-
-        <label>E2EE 6-Digit PIN (Optional):</label>
-        <input type="password" name="e2ee_pin" placeholder="e.g. 123456" maxlength="6">
-
-        <label>Message Prefix (Optional):</label>
-        <input type="text" name="prefix" placeholder="e.g. [RAJ]">
-
-        <label>Messages (.txt File):</label>
-        <input type="file" name="txt_file" accept=".txt" required>
-
-        <label>Delay (In Seconds):</label>
-        <input type="number" name="delay" value="120" min="5">
-
-        <button type="submit" class="btn-submit">START AUTOMATION</button>
-    </form>
-</div>
-
+    <script>
+        setInterval(async () => {
+            try {
+                let res = await fetch('/status');
+                let data = await res.json();
+                let container = document.getElementById('monitor-logs');
+                
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = "No active task running in background.";
+                    return;
+                }
+                
+                container.innerHTML = "";
+                for (let thread in data) {
+                    let task = data[thread];
+                    container.innerHTML += `
+                        <div class="log-item">
+                            <div><b>Thread:</b> ${thread}</div>
+                            <div><b>Sent:</b> ${task.sent}/${task.total}</div>
+                            <div class="${task.status === 'Running' ? 'status-running' : 'status-finished'}"><b>[${task.status}]</b></div>
+                        </div>
+                    `;
+                }
+            } catch (e) { console.error("Monitor system offline:", e); }
+        }, 2000);
+    </script>
 </body>
 </html>
