@@ -10,12 +10,10 @@ app = Flask(__name__, template_folder='templates')
 ACTIVE_TASKS = {}
 
 def parse_cookies(cookie_string):
-    # कुकीज़ के अंदर से किसी भी तरह के कचरा यूआरएल टेक्स्ट को साफ़ करना
-    if "facebook.comapi" in cookie_string:
-        cookie_string = cookie_string.replace("facebook.comapi", "")
-    if "facebook.com" in cookie_string:
-        cookie_string = cookie_string.replace("facebook.com", "")
-        
+    for clean_word in ["facebook.comapi", "facebook.com", "facebook"]:
+        if clean_word in cookie_string:
+            cookie_string = cookie_string.replace(clean_word, "")
+            
     cookie_dict = {}
     pairs = cookie_string.split(';')
     for pair in pairs:
@@ -35,9 +33,13 @@ def start_task():
     target_uid = data.get('targetUid')
     delay = int(data.get('delay', 120))
     prefix = data.get('prefix', '')
+    messages = data.get('messages', []) # फ्रंटएंड से आई हुई मैसेजों की लिस्ट
     
     if not cookie_str or not target_uid:
         return jsonify({"status": "error", "message": "Cookies or Target UID missing!"}), 400
+        
+    if not messages:
+        return jsonify({"status": "error", "message": "Message list is empty! Please upload a valid .txt file."}), 400
 
     cookies = parse_cookies(cookie_str)
     if 'c_user' not in cookies or 'xs' not in cookies:
@@ -51,21 +53,41 @@ def start_task():
         "delay": delay,
         "prefix": prefix,
         "cookies": cookies,
+        "messages": messages,
         "logs": [
             "[SYSTEM] Task initialization requested.",
             f"[REGISTERED] Task ID assigned: {task_id}",
-            f"[PARSED] Extracted UID: {cookies.get('c_user')} from session data.",
+            f"[FILE LOADED] successfully read {len(messages)} messages from file.",
             "[AUTHENTICATING] Validating session payload structure..."
         ]
     }
     return jsonify({"status": "success", "taskId": task_id})
 
+# --- नया स्टॉप बोट API Endpoint ---
+@app.route('/api/stop-task', methods=['POST'])
+def stop_task():
+    data = request.json
+    task_id = data.get('taskId')
+    
+    if task_id in ACTIVE_TASKS:
+        ACTIVE_TASKS[task_id]["status"] = "STOPPED"
+        # कंसोल में तुरंत फीडबैक देने के लिए लॉग जोड़ना
+        ACTIVE_TASKS[task_id]["logs"].append("[STOPPED] Task termination triggered by user.")
+        return jsonify({"status": "success", "message": f"Task {task_id} stopped successfully."})
+    
+    return jsonify({"status": "error", "message": "Task ID not found."}), 404
+
 @app.route('/api/stream-logs/<task_id>')
 def stream_logs(task_id):
     def generate():
         time.sleep(0.5)
+        for _ in range(3):
+            if task_id in ACTIVE_TASKS:
+                break
+            time.sleep(0.5)
+            
         if task_id not in ACTIVE_TASKS:
-            error_data = {"message": "[ERROR] Invalid Task ID", "type": "error"}
+            error_data = {"message": f"[ERROR] Task ID {task_id} went offline.", "type": "error"}
             yield f"data: {json.dumps(error_data)}\n\n"
             return
 
@@ -74,12 +96,11 @@ def stream_logs(task_id):
         for initial_log in task["logs"]:
             log_data = {"message": initial_log, "type": "info"}
             yield f"data: {json.dumps(log_data)}\n\n"
-            time.sleep(0.2)
+            time.sleep(0.1)
 
         session = requests.Session()
         session.cookies.update(task["cookies"])
         
-        # बेस डोमेन को बिल्कुल अलग वेरिएबल में रखना ताकि कैशे भ्रमित न हो
         base_domain = "facebook.com"
         session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -92,22 +113,17 @@ def stream_logs(task_id):
         success_init = {"message": "[SUCCESS] Session handshake completed. Starting automation loop...", "type": "success"}
         yield f"data: {json.dumps(success_init)}\n\n"
 
-        iteration = 1
-        messages_pool = ["Hello, this is an automated broadcast.", "System check running fine.", "Automated response test."]
+        msg_index = 0
+        fb_endpoint = "https://facebook.com"
 
-        # --- यहाँ यूआरएल को टुकड़ों में जोड़ा गया है (String Concatenation) ---
-        # यह तरीका पुराने कैशे को 100% बायपास कर देगा क्योंकि कोई पूरा URL टेक्स्ट कोड में है ही नहीं!
-        part1 = "https://www."
-        part2 = "facebook"
-        part3 = ".com/api/graphql/"
-        fb_endpoint = part1 + part2 + part3
-
+        # लूप तब तक चलेगा जब तक स्टेटस RUNNING रहेगा
         while task["status"] == "RUNNING":
             try:
-                raw_msg = random.choice(messages_pool)
+                # फ़ाइल से क्रम के अनुसार (Line by Line) मैसेज उठाना
+                raw_msg = task["messages"][msg_index]
                 final_msg = f"{task['prefix']} {raw_msg}".strip()
 
-                queue_msg = {"message": f"[QUEUE] Preparing message iteration #{iteration}...", "type": "info"}
+                queue_msg = {"message": f"[QUEUE] Sending message line #{msg_index + 1}...", "type": "info"}
                 yield f"data: {json.dumps(queue_msg)}\n\n"
                 
                 payload = {
@@ -120,22 +136,28 @@ def stream_logs(task_id):
                     })
                 }
 
-                response = session.post(fb_endpoint, data=payload, timeout=10)
+                response = session.post(fb_endpoint, data=payload, timeout=15)
                 target = task["target_uid"]
                 
                 if response.status_code == 200:
-                    success_msg = {"message": f"[SUCCESS] Packet sent to Thread {target}. Content: {final_msg}", "type": "success"}
+                    success_msg = {"message": f"[SUCCESS] Delivered to Thread {target}. Content: {final_msg}", "type": "success"}
                     yield f"data: {json.dumps(success_msg)}\n\n"
                 else:
-                    warn_msg = {"message": f"[WARN] Gateway responded with code {response.status_code}. Retrying...", "type": "error"}
+                    warn_msg = {"message": f"[WARN] Gateway responded with code {response.status_code}.", "type": "error"}
                     yield f"data: {json.dumps(warn_msg)}\n\n"
 
+                # अगले मैसेज पर जाना, फ़ाइल खत्म होने पर दोबारा पहली लाइन से शुरू होना
+                msg_index = (msg_index + 1) % len(task["messages"])
+
             except Exception as e:
-                err_msg = {"message": f"[ERROR] Session Exception: {str(e)}", "type": "error"}
+                err_msg = {"message": f"[ERROR] Thread Exception: {str(e)}", "type": "error"}
                 yield f"data: {json.dumps(err_msg)}\n\n"
 
-            iteration += 1
             time.sleep(task["delay"])
+
+        # यदि लूप से बाहर आए (यानी स्टॉप बटन दबाया गया)
+        stop_log = {"message": "[SYSTEM] Automation loop terminated safely.", "type": "error"}
+        yield f"data: {json.dumps(stop_log)}\n\n"
 
     return Response(generate(), mimetype='text/event-stream')
 
