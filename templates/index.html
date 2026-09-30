@@ -3,108 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Auto Tool - Raj Mishra</title>
+    <title>Messenger Automation Tool</title>
+    <!-- Bootstrap CSS for clean design -->
+    <link href="https://jsdelivr.net" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
-        body { background-color: #fff0f5; padding: 10px; margin: 0; display: flex; justify-content: center; }
-        .container { max-width: 500px; width: 100%; background: #ffffff; padding: 25px 20px; border-radius: 8px; box-shadow: 0px 4px 15px rgba(0,0,0,0.05); position: relative; margin-top: 10px; }
-        .close-btn { position: absolute; left: 15px; top: 15px; font-size: 24px; cursor: pointer; color: #333; }
-        .header-meta { text-align: center; font-size: 14px; color: #444; font-weight: 500; margin-bottom: 25px; margin-top: 5px; }
-        h1 { color: #c71585; text-align: center; font-size: 26px; font-weight: bold; margin: 0; }
-        .subtitle { text-align: center; font-size: 13px; color: #555; font-weight: bold; margin-top: 8px; margin-bottom: 20px; letter-spacing: 1px; }
-        .badge-info { background-color: #e6f7ed; border: 1px solid #a3e2bc; color: #1e7e48; border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.5; margin-bottom: 25px; display: flex; align-items: center; gap: 8px; }
-        .form-group { margin-bottom: 20px; }
-        label { font-weight: 600; display: block; margin-bottom: 8px; color: #333; font-size: 14px; }
-        input[type="text"], input[type="number"], textarea { width: 100%; padding: 12px; border: 1px solid #e2e8f0; background-color: #fff9fb; border-radius: 6px; font-size: 14px; outline: none; }
-        input:focus, textarea:focus { border-color: #c71585; }
-        .btn-check { width: 100%; padding: 12px; background-color: #00a86b; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; }
-        .btn-submit { width: 100%; padding: 14px; background-color: #c71585; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .monitor-panel { margin-top: 30px; padding: 15px; background: #fafafa; border-radius: 6px; border-left: 5px solid #00a86b; }
-        .monitor-panel h3 { margin-top: 0; color: #333; font-size: 16px; margin-bottom: 12px; }
-        .log-item { background: white; padding: 8px 12px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; }
-        .status-running { color: #00a86b; font-weight: bold; }
-        .status-finished { color: #0056b3; font-weight: bold; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: none; margin-bottom: 20px; }
+        .btn-primary { background-color: #0084ff; border: none; }
+        .btn-primary:hover { background-color: #0066cc; }
+        .badge-running { background-color: #28a745; }
+        .badge-stopped { background-color: #dc3545; }
+        .badge-completed { background-color: #007bff; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <span class="close-btn">&times;</span>
-        <div class="header-meta">Messenger Auto Tool - R...</div>
-        
-        <h1>Messenger Automation<br>Bot</h1>
-        <div class="subtitle">DEVELOPED BY : RAJ MISHRA</div>
-        
-        <div class="badge-info">
-            <span>🔄</span> 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin
-        </div>
-        
-        <form id="botForm" action="/start" method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label>Messenger Cookie String:</label>
-                <textarea name="cookie" rows="3" placeholder="c_user=...; xs=...; datr=...;" required></textarea>
-            </div>
-            
-            <button type="button" class="btn-check" onclick="alert('Cookie standard sequence verified successfully.')">📋 Check Cookies</button>
-            
-            <div class="form-group">
-                <label>Target UID / Thread ID:</label>
-                <input type="text" name="target" placeholder="e.g. 1000XXXXXXXXX" required>
-            </div>
-            
-            <div class="form-group">
-                <label>E2EE 6-Digit PIN (Optional):</label>
-                <input type="text" name="pin" placeholder="e.g. 123456">
-            </div>
-            
-            <div class="form-group">
-                <label>Message Prefix (Optional):</label>
-                <input type="text" name="prefix" placeholder="e.g. [RAJ]">
-            </div>
-            
-            <div class="form-group">
-                <label>Messages (.txt File):</label>
-                <input type="file" name="message_file" accept=".txt" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Delay (In Seconds):</label>
-                <input type="number" name="delay" value="120" min="5" required>
-            </div>
-            
-            <button type="submit" class="btn-submit">Start Automation Process</button>
-        </form>
 
-        <div class="monitor-panel">
-            <h3>📊 Live Task Monitor</h3>
-            <div id="monitor-logs">No active task running in background.</div>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <!-- Form Column -->
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h3 class="text-center mb-4">💬 Messenger Automation</h3>
+                
+                <form action="/start" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Facebook Cookie:</label>
+                        <input type="text" name="cookie" class="form-control" placeholder="Paste your fb cookie here" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Target (Inbox URL or Thread ID):</label>
+                        <input type="text" name="target" class="form-control" placeholder="https://facebook.com..." required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Message Prefix / Hater Name (Optional):</label>
+                        <input type="text" name="prefix" class="form-control" placeholder="e.g. Brand">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Delay between messages (Seconds):</label>
+                        <input type="number" name="delay" class="form-control" value="120" min="5" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Upload Message File (.txt):</label>
+                        <input type="file" name="message_file" class="form-control" accept=".txt" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">START AUTOMATION PROCESS</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Live Monitor Column -->
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h4 class="mb-3">📊 Live Task Monitor</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Target ID</th>
+                                <th>Sent / Total</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="task-table-body">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No active tasks tracking.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        setInterval(async () => {
-            try {
-                let res = await fetch('/status');
-                let data = await res.json();
-                let container = document.getElementById('monitor-logs');
+<!-- Live Real-time Update Script -->
+<script>
+    // हर 2 सेकंड में बैकएंड से टास्क स्टेटस फेच करने का फंक्शन (View Code Implementation)
+    async function updateTaskStatus() {
+        try {
+            const response = await fetch('/status');
+            const tasks = await response.json();
+            const tbody = document.getElementById('task-table-body');
+            
+            if (Object.keys(tasks).length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No active tasks tracking.</td></tr>`;
+                return;
+            }
+            
+            let htmlContent = '';
+            for (const [targetId, task] of Object.entries(tasks)) {
+                let badgeClass = 'bg-secondary';
+                if (task.status === 'Running') badgeClass = 'badge-running';
+                else if (task.status === 'Stopped') badgeClass = 'badge-stopped';
+                else if (task.status === 'Completed') badgeClass = 'badge-completed';
                 
-                if (Object.keys(data).length === 0) {
-                    container.innerHTML = "No active task running in background.";
-                    return;
+                // स्टॉप बटन तभी दिखेगा जब टास्क चल रहा (Running) हो
+                let actionButton = '';
+                if (task.status === 'Running') {
+                    actionButton = `<button class="btn btn-danger btn-sm fw-bold" onclick="stopTask('${targetId}')">Stop</button>`;
+                } else {
+                    actionButton = `<button class="btn btn-secondary btn-sm" disabled>Inactive</button>`;
                 }
-                
-                container.innerHTML = "";
-                for (let thread in data) {
-                    let task = data[thread];
-                    container.innerHTML += `
-                        <div class="log-item">
-                            <div><b>Thread:</b> ${thread}</div>
-                            <div><b>Sent:</b> ${task.sent}/${task.total}</div>
-                            <div class="${task.status === 'Running' ? 'status-running' : 'status-finished'}"><b>[${task.status}]</b></div>
-                        </div>
-                    `;
-                }
-            } catch (e) { console.error("Monitor system offline:", e); }
-        }, 2000);
-    </script>
+
+                htmlContent += `
+                    <tr>
+                        <td class="text-truncate" style="max-width: 120px;" title="${targetId}"><strong>${targetId}</strong></td>
+                        <td><span class="text-primary fw-bold">${task.sent}</span> / ${task.total}</td>
+                        <td><span class="badge ${badgeClass}">${task.status}</span></td>
+                        <td>${actionButton}</td>
+                    </tr>
+                `;
+            }
+            tbody.innerHTML = htmlContent;
+        } catch (error) {
+            console.error("Error fetching status:", error);
+        }
+    }
+
+    // बटन क्लिक होने पर टास्क को स्टॉप करने का फंक्शन (Task Stop Implementation)
+    async function stopTask(targetId) {
+        if (!confirm(`Are you sure you want to stop the task for ID: ${targetId}?`)) return;
+        
+        const formData = new FormData();
+        formData.append('target', targetId);
+        
+        try {
+            const response = await fetch('/stop', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            alert(result.message || result.error);
+            updateTaskStatus(); // तुरंत लिस्ट रिफ्रेश करें
+        } catch (error) {
+            console.error("Error stopping task:", error);
+        }
+    }
+
+    // पेज लोड होने पर इंटरवल शुरू करें
+    setInterval(updateTaskStatus, 2000);
+    window.onload = updateTaskStatus;
+</script>
+
 </body>
 </html>
