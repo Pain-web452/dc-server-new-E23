@@ -9,16 +9,13 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-# सर्वर शुरू होने का समय (Uptime के लिए)
 SERVER_START_TIME = time.time()
-
-# रीयल-टाइम टास्क मॉनिटरिंग स्टोरेज
 active_tasks = {}
 
 def extract_thread_id(target_input):
     if not target_input:
         return "UNKNOWN_TASK"
-    # अगर पूरा URL या पाथ दिया गया हो तो उसमें से नंबर निकालता है
+    # अगर पूरा URL या पाथ दिया गया हो तो उसमें से मुख्य संख्यात्मक ID निकालता है
     match_slash = re.search(r'([0-9]{10,})', target_input)
     if match_slash:
         return match_slash.group(1)
@@ -39,6 +36,7 @@ def messenger_sender_task(cookie, raw_target, prefix, messages, delay, pin, task
     session = requests.Session()
     
     for idx, msg in enumerate(messages):
+        # **Task Stop चेक:** यदि यूजर ने टास्क रोक दिया है तो तुरंत रुकें
         if active_tasks.get(task_id, {}).get('status') in ['Completed', 'Stopped']:
             break
             
@@ -46,43 +44,48 @@ def messenger_sender_task(cookie, raw_target, prefix, messages, delay, pin, task
         current_time = datetime.now().strftime("%I:%M:%S %p")
         
         try:
-            # 1. इनबॉक्स पेज को लोड करना ताकि फॉर्म टोकन्स मिल सकें
             url = f"https://facebook.commessages/read/?tid={thread_id}"
             response = session.get(url, headers=headers)
             
-            # BeautifulSoup से पूरे पेज का फॉर्म पार्स करना
+            # यदि फेसबुक एंड-टू-एंड एन्क्रिप्शन (E2EE) पिन मांगता है
+            if "enter_pin" in response.text or "pin" in response.text or "secure" in response.text:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                pin_form = soup.find('form')
+                if pin_form:
+                    pin_action = "https://facebook.com" + pin_form['action']
+                    pin_payload = {}
+                    for input_tag in pin_form.find_all('input'):
+                        if input_tag.get('name'):
+                            pin_payload[input_tag['name']] = input_tag.get('value', '')
+                    
+                    if pin:
+                        pin_payload['pin'] = pin
+                        response = session.post(pin_action, headers=headers, data=pin_payload)
+            
+            # मैसेज भेजने का एक्शन फॉर्म खोजना
             soup = BeautifulSoup(response.text, 'html.parser')
             form = soup.find('form', action=re.compile(r'/messages/send/'))
             
             if not form:
-                # यदि इनबॉक्स फॉर्म नहीं मिला, तो हो सकता है कुकी एक्सपायर हो गई हो
                 raise Exception("Cookie Expired or Invalid Thread ID (Form not found)")
-            
-            # फॉर्म का सही एक्शन URL निकालना
+                
             action_url = "https://facebook.com" + form['action']
-            
-            # फॉर्म के सभी हिडन इनपुट्स (fb_dtsg, jazoest, tids आदि) को ऑटो-कैप्चर करना
             payload = {}
             for input_tag in form.find_all('input'):
                 if input_tag.get('name'):
                     payload[input_tag['name']] = input_tag.get('value', '')
-            
-            # टेक्स्ट एरिया/मैसेज बॉडी और सेंड बटन सेट करना
+                    
             payload['body'] = final_msg
             payload['send'] = 'Send'
             
-            # यदि एंड-टू-एंड पिन की फ़ील्ड मौजूद हो
-            if pin:
-                payload['pin'] = pin
-            
-            # 2. सही टोकन्स के साथ मैसेज पोस्ट करना
+            # मैसेज पोस्ट करना
             send_response = session.post(action_url, headers=headers, data=payload)
             
-            # वेरिफिकेशन: चेक करना कि क्या मैसेज सच में डिलीवर हुआ या फेसबुक ने ब्लॉक किया
+            # क्या फेसबुक ने ब्लॉक या चेकपॉइंट ट्रिगर किया
             if "error" in send_response.url or "checkpoint" in send_response.url:
-                raise Exception("Facebook blocked the request or security checkpoint triggered")
+                raise Exception("Facebook blocked the request or checkpoint triggered")
             
-            # टास्क प्रोग्रेस और टर्मिनल लॉग अपडेट करना
+            # प्रोग्रेस और लाइव लॉग्स अपडेट करना
             if active_tasks.get(task_id):
                 active_tasks[task_id]['sent'] += 1
                 active_tasks[task_id]['status'] = 'Running'
