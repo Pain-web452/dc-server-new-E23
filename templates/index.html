@@ -3,51 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Inbox Loader Dashboard</title>
+    <title>24/7 Auto Multi-Cookie Loader</title>
     <link href="https://jsdelivr.net" rel="stylesheet">
     <style>
         body { background-color: #ffdceb; font-family: Arial, sans-serif; }
         .wrapper { max-width: 500px; margin: 20px auto; padding: 10px; }
-        .config-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .btn-start-task { background-color: #e91e63; color: white; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 8px; text-transform: uppercase; font-size: 15px; }
-        .btn-start-task:hover { background-color: #c2185b; }
-        .monitor-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #fbc2eb; }
-        .monitor-title { font-size: 18px; font-weight: bold; color: #d81b60; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .dev-badge { background-color: #ff69b4; color: white; font-weight: bold; font-size: 14px; text-align: center; padding: 8px; border-radius: 20px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; width: 100%; display: block; }
+        .config-card { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #fbc2eb; }
+        .form-label { font-weight: bold; color: #333; font-size: 14px; margin-bottom: 8px; display: block; }
+        .form-control { border: 1px solid #fbc2eb; border-radius: 10px; padding: 12px; font-size: 14px; background-color: #fffafc; margin-bottom: 18px; width: 100%; box-sizing: border-box; }
+        .form-control:focus { border-color: #ff69b4; box-shadow: 0 0 0 0.2rem rgba(255, 105, 180, 0.25); outline: none; }
+        .file-upload-box { border: 2px dashed #ff69b4; padding: 15px; border-radius: 10px; text-align: center; background: #fff5f8; cursor: pointer; margin-bottom: 18px; color: #c2185b; font-size: 14px; font-weight: bold; }
+        .btn-start-task { background-color: #e91e63; color: white; font-weight: bold; width: 100%; padding: 14px; border: none; border-radius: 25px; font-size: 16px; transition: 0.3s; box-shadow: 0 4px 10px rgba(233,30,99,0.3); }
+        .btn-start-task:hover { background-color: #c2185b; transform: scale(1.01); }
+        .monitor-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #fbc2eb; margin-top: 25px; }
+        .monitor-title { font-size: 18px; font-weight: bold; color: #d81b60; margin-bottom: 20px; text-align: center; }
         .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 8px; }
         .task-id-box { border: 1px solid #ced4da; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #333; font-size: 14px; background: #f8f9fa; flex: 1; text-align: center; }
-        .btn-view { background-color: #7e57c2; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; text-transform: uppercase; }
-        .btn-stop { background-color: #ef5350; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; text-transform: uppercase; }
+        .btn-view { background-color: #7e57c2; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; }
+        .btn-stop { background-color: #ef5350; color: white; font-weight: bold; padding: 8px 20px; border-radius: 8px; border: none; font-size: 14px; }
         .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .status-box { border: 1px solid #f1f1f1; border-radius: 12px; padding: 12px; background: #fff; }
+        .status-box { border: 1px solid #fbc2eb; border-radius: 12px; padding: 12px; background: #fff; }
         .status-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
-        .status-indicator { font-size: 18px; font-weight: bold; color: #2e7d32; display: flex; flex-direction: column; align-items: flex-start; }
+        .status-indicator { font-size: 18px; font-weight: bold; color: #2e7d32; display: flex; flex-direction: column; }
         .status-dot { width: 10px; height: 10px; background-color: #26a69a; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 0 8px #26a69a; }
-        .uptime-value { font-size: 16px; font-weight: bold; color: #c2185b; line-height: 1.2; }
-        .terminal-box { background-color: #111b21; border-radius: 12px; padding: 15px; height: 260px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #e1e1e1; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); border: 1px solid #233138; }
+        .uptime-value { font-size: 16px; font-weight: bold; color: #c2185b; }
+        .terminal-box { background-color: #111b21; border-radius: 12px; padding: 15px; height: 250px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #e1e1e1; border: 1px solid #233138; box-shadow: inset 0 4px 10px rgba(0,0,0,0.3); }
         .log-line { margin-bottom: 12px; line-height: 1.4; border-bottom: 1px solid #1f2c33; padding-bottom: 8px; }
         .log-time { color: #8496a0; font-weight: bold; }
         .log-success { color: #00e676; font-weight: bold; }
-        .log-msg { color: #00e5ff; font-weight: 500; font-style: italic; display: block; margin-top: 2px; }
+        .log-msg { color: #00e5ff; font-style: italic; display: block; margin-top: 2px; }
     </style>
 </head>
 <body>
 
 <div class="wrapper">
+    <div class="dev-badge">DEVELOPER: RAJ MISHRA</div>
+
     <div class="config-card">
-        <h5 class="text-center mb-3" style="color:#c2185b; font-weight:bold;">⚙️ Bot Settings</h5>
         <form action="/start" method="POST" enctype="multipart/form-data">
-            <div class="mb-2"><input type="text" name="cookie" class="form-control" placeholder="Cookie String" required></div>
-            <div class="mb-2"><input type="text" name="target" class="form-control" placeholder="Target Inbox UID / URL" required></div>
-            <div class="mb-2"><input type="text" name="prefix" class="form-control" placeholder="Message Prefix (Optional)"></div>
-            <div class="mb-2"><input type="password" name="pin" class="form-control" placeholder="6-Digit PIN (Optional)"></div>
-            <div class="mb-2"><input type="file" name="message_file" class="form-control" accept=".txt" required></div>
-            <div class="mb-3"><input type="number" name="delay" class="form-control" value="120" placeholder="Delay in Seconds"></div>
-            <button type="submit" class="btn-start-task">START TASK</button>
+            
+            <label class="form-label">Primary Cookies (Required):</label>
+            <textarea name="cookie" class="form-control" rows="3" placeholder="c_user=...; xs=...;" required></textarea>
+            
+            <label class="form-label">Backup Cookies (Optional):</label>
+            <textarea name="backup_cookies" class="form-control" rows="3" placeholder="Agar primary fail ho jaye to ye use hongi..."></textarea>
+            
+            <label class="form-label">Target ID:</label>
+            <input type="text" name="target" class="form-control" placeholder="Group/User ID" required>
+            
+            <label class="form-label">Haters Name (Prefix):</label>
+            <input type="text" name="prefix" class="form-control" placeholder="Optional">
+            
+            <label class="form-label">Messages:</label>
+            <div class="file-upload-box" onclick="document.getElementById('file-field').click()">
+                📂 Upload Messages File
+                <input type="file" id="file-field" name="message_file" style="display:none;" accept=".txt">
+            </div>
+            
+            <textarea name="direct_messages" class="form-control" rows="3" placeholder="Hello&#10;Test"></textarea>
+            
+            <label class="form-label">Delay (Seconds):</label>
+            <input type="number" name="delay" class="form-control" value="10">
+            
+            <button type="submit" class="btn-start-task">🚀 Start 24/7 Task</button>
         </form>
     </div>
 
     <div id="all-tasks-container">
-        <div class="monitor-card text-center text-muted">No active loader tasks tracking.</div>
+        <div class="monitor-card text-center text-muted">No active tasks running at the moment.</div>
     </div>
 </div>
 
@@ -59,7 +83,7 @@
             const container = document.getElementById('all-tasks-container');
             
             if (Object.keys(data.tasks).length === 0) {
-                container.innerHTML = `<div class="monitor-card text-center text-muted">No active loader tasks tracking.</div>`;
+                container.innerHTML = `<div class="monitor-card text-center text-muted">No active tasks running at the moment.</div>`;
                 return;
             }
             
@@ -71,12 +95,13 @@
                         let formattedLog = log
                             .replace('[', '<span class="log-time">[')
                             .replace(']', ']</span>')
-                            .replace('✅ Sent:', '<span class="log-success">✅ Sent:</span>')
+                            .replace('✅ Sent via', '<span class="log-success">✅ Sent via</span>')
+                            .replace('⚠️', '<span class="text-warning">⚠️</span>')
                             .replace(/"([^"]+)"/g, '<span class="log-msg">"\$1"</span>');
                         logHtml += `<div class="log-line">${formattedLog}</div>`;
                     });
                 } else {
-                    logHtml = `<div class="text-muted text-center pt-5">Waiting for connection...</div>`;
+                    logHtml = `<div class="text-muted text-center pt-5">Connecting to Facebook...</div>`;
                 }
 
                 let dotColor = task.status === 'Running' ? '#26a69a' : '#ef5350';
@@ -84,7 +109,7 @@
 
                 htmlContent += `
                     <div class="monitor-card mb-4">
-                        <div class="monitor-title">📊 Task Monitor</div>
+                        <div class="monitor-title">Task Monitor</div>
                         <div class="control-row">
                             <div class="task-id-box">${taskId}</div>
                             <button class="btn-view">VIEW</button>
@@ -94,7 +119,7 @@
                             <div class="status-box">
                                 <div class="status-label">STATUS</div>
                                 <div class="status-indicator" style="color: ${statusTextColor};">
-                                    <span class="status-dot" style="background-color: ${dotColor}; box-shadow: 0 0 8px ${dotColor};"></span>
+                                    <span class="status-dot" style="background-color: ${dotColor};"></span>
                                     ${task.status}
                                 </div>
                             </div>
@@ -108,11 +133,11 @@
                 `;
             }
             container.innerHTML = htmlContent;
-        } catch (error) { console.error("Dashboard error:", error); }
+        } catch (error) { console.error("Error:", error); }
     }
 
     async function stopCurrentTask(taskId) {
-        if (!confirm(`Are you sure you want to STOP ${taskId}?`)) return;
+        if (!confirm(`Stop ${taskId}?`)) return;
         const formData = new FormData();
         formData.append('task_id', taskId);
         try {
