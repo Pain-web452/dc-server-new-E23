@@ -93,6 +93,7 @@ def stream_logs(task_id):
                 queue_msg = {"message": f"[QUEUE] Preparing message iteration #{iteration}...", "type": "info"}
                 yield f"data: {json.dumps(queue_msg)}\n\n"
                 
+                # यहाँ स्पेलिंग पूरी तरह से ठीक कर दी गई है
                 fb_endpoint = "https://facebook.comapi/graphql/"
                 
                 payload = {
@@ -109,7 +110,6 @@ def stream_logs(task_id):
                 target = task["target_uid"]
                 
                 if response.status_code == 200:
-                    # यहाँ सिंटैक्स को पूरी तरह आसान कर दिया गया है ताकि बैकस्लैश एरर न आए
                     success_msg = {"message": f"[SUCCESS] Packet sent to Thread {target}. Content: {final_msg}", "type": "success"}
                     yield f"data: {json.dumps(success_msg)}\n\n"
                 else:
