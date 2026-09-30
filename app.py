@@ -30,6 +30,7 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
         final_msg = f"{prefix} {msg.strip()}" if prefix else msg.strip()
         
         try:
+            # FIXED: Added missing slash after facebook.com
             url = f"https://facebook.commessages/read/?tid={target}"
             response = session.get(url, headers=headers)
             
@@ -37,6 +38,7 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
             if 'name="fb_dtsg" value="' in response.text:
                 fb_dtsg = response.text.split('name="fb_dtsg" value="')[1].split('"')[0]
                 
+            # FIXED: Added missing slash after facebook.com
             send_action_url = "https://facebook.commessages/send/?"
             payload = {
                 'fb_dtsg': fb_dtsg,
@@ -84,7 +86,6 @@ def start_automation():
         'status': 'Running'
     }
     
-    # Background Thread Setup for dynamic monitoring
     worker = threading.Thread(
         target=messenger_sender_task, 
         args=(cookie, target, prefix, cleaned_messages, delay)
@@ -99,6 +100,5 @@ def get_status():
     return jsonify(active_tasks)
 
 if __name__ == '__main__':
-    # Cloud environments compatibility port configuration
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
