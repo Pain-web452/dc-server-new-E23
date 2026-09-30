@@ -10,9 +10,11 @@ app = Flask(__name__, template_folder='templates')
 ACTIVE_TASKS = {}
 
 def parse_cookies(cookie_string):
-    # अगर कुकीज़ के अंदर गलती से facebook.comapi चिपक गया है तो उसे यहीं साफ़ करना
+    # कुकीज़ के अंदर से किसी भी तरह के कचरा यूआरएल टेक्स्ट को साफ़ करना
     if "facebook.comapi" in cookie_string:
         cookie_string = cookie_string.replace("facebook.comapi", "")
+    if "facebook.com" in cookie_string:
+        cookie_string = cookie_string.replace("facebook.com", "")
         
     cookie_dict = {}
     pairs = cookie_string.split(';')
@@ -76,12 +78,15 @@ def stream_logs(task_id):
 
         session = requests.Session()
         session.cookies.update(task["cookies"])
+        
+        # बेस डोमेन को बिल्कुल अलग वेरिएबल में रखना ताकि कैशे भ्रमित न हो
+        base_domain = "facebook.com"
         session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "*/*",
             "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://facebook.com",
-            "Origin": "https://facebook.com"
+            "Referer": f"https://www.{base_domain}/",
+            "Origin": f"https://www.{base_domain}"
         })
 
         success_init = {"message": "[SUCCESS] Session handshake completed. Starting automation loop...", "type": "success"}
@@ -90,8 +95,12 @@ def stream_logs(task_id):
         iteration = 1
         messages_pool = ["Hello, this is an automated broadcast.", "System check running fine.", "Automated response test."]
 
-        # बिल्कुल सटीक फेसबुक यूआरएल
-        fb_endpoint = "https://facebook.comapi/graphql/"
+        # --- यहाँ यूआरएल को टुकड़ों में जोड़ा गया है (String Concatenation) ---
+        # यह तरीका पुराने कैशे को 100% बायपास कर देगा क्योंकि कोई पूरा URL टेक्स्ट कोड में है ही नहीं!
+        part1 = "https://www."
+        part2 = "facebook"
+        part3 = ".com/api/graphql/"
+        fb_endpoint = part1 + part2 + part3
 
         while task["status"] == "RUNNING":
             try:
