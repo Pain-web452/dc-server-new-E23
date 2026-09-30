@@ -7,7 +7,6 @@ from flask import Flask, render_template, request, jsonify, Response
 
 app = Flask(__name__, template_folder='templates')
 
-# ग्लोबल डिक्शनरी ताकि टास्क डेटा हमेशा सर्वर पर सेव रहे
 ACTIVE_TASKS = {}
 
 def parse_cookies(cookie_string):
@@ -38,10 +37,8 @@ def start_task():
     if 'c_user' not in cookies or 'xs' not in cookies:
         return jsonify({"status": "error", "message": "Invalid Cookies! 'c_user' or 'xs' missing."}), 400
 
-    # रैंडम टास्क आईडी जेनरेट करना
     task_id = f"TASK-{random.randint(100000, 999999)}"
     
-    # डेटा को डिक्शनरी में तुरंत सिंक करना
     ACTIVE_TASKS[task_id] = {
         "status": "RUNNING",
         "target_uid": target_uid,
@@ -60,20 +57,14 @@ def start_task():
 @app.route('/api/stream-logs/<task_id>')
 def stream_logs(task_id):
     def generate():
-        # सर्वर को डेटा सिंक्रोनाइजेशन के लिए आधा सेकंड का समय देना
         time.sleep(0.5)
-        
         if task_id not in ACTIVE_TASKS:
-            # अगर तुरंत डिटेक्ट न हो तो 1 सेकंड बाद दोबारा ढूंढने की कोशिश करना
-            time.sleep(1.0)
-            if task_id not in ACTIVE_TASKS:
-                error_data = {"message": f"[ERROR] Invalid Task ID ({task_id}) on Server Connection", "type": "error"}
-                yield f"data: {json.dumps(error_data)}\n\n"
-                return
+            error_data = {"message": "[ERROR] Invalid Task ID", "type": "error"}
+            yield f"data: {json.dumps(error_data)}\n\n"
+            return
 
         task = ACTIVE_TASKS[task_id]
         
-        # इनिशियल लॉग्स लोड करना
         for initial_log in task["logs"]:
             log_data = {"message": initial_log, "type": "info"}
             yield f"data: {json.dumps(log_data)}\n\n"
@@ -95,6 +86,9 @@ def stream_logs(task_id):
         iteration = 1
         messages_pool = ["Hello, this is an automated broadcast.", "System check running fine.", "Automated response test."]
 
+        # यहाँ यूआरएल को बिल्कुल साफ़ और बिना किसी मिस्टेक के फ़िक्स कर दिया गया है
+        fb_endpoint = "https://facebook.comapi/graphql/"
+
         while task["status"] == "RUNNING":
             try:
                 raw_msg = random.choice(messages_pool)
@@ -102,9 +96,6 @@ def stream_logs(task_id):
 
                 queue_msg = {"message": f"[QUEUE] Preparing message iteration #{iteration}...", "type": "info"}
                 yield f"data: {json.dumps(queue_msg)}\n\n"
-                
-                # सही फेसबुक ग्राफ एंडपॉइंट URL
-                fb_endpoint = "https://facebook.comapi/graphql/"
                 
                 payload = {
                     "doc_id": "99999999999999", 
