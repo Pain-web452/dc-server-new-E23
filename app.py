@@ -7,8 +7,22 @@ from flask import Flask, render_template, request, jsonify, Response
 
 app = Flask(__name__, template_folder='templates')
 
-# एक्टिव टास्क स्टोर करने के लिए ग्लोबल डिक्शनरी
-ACTIVE_TASKS = {}
+DB_FILE = "tasks_db.json"
+
+# हार्ड डिस्क से टास्क डेटा लोड करने का फंक्शन
+def load_db():
+    if not os.path.exists(DB_FILE):
+        return {}
+    try:
+        with open(DB_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {}
+
+# हार्ड डिस्क में टास्क डेटा सेव करने का फंक्शन
+def save_db(data):
+    with open(DB_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 def parse_cookies(cookie_string):
     for clean_word in ["facebook.comapi", "facebook.com", "facebook"]:
@@ -27,7 +41,6 @@ def parse_cookies(cookie_string):
 def home():
     return render_template('index.html')
 
-# 1. टास्क स्टार्ट करने का एंडपॉइंट
 @app.route('/api/start-task', methods=['POST'])
 def start_task():
     data = request.json
@@ -49,7 +62,8 @@ def start_task():
 
     task_id = f"TASK-{random.randint(100000, 999999)}"
     
-    ACTIVE_TASKS[task_id] = {
+    db = load_db()
+    db[task_id] = {
         "status": "RUNNING",
         "target_uid": target_uid,
         "delay": delay,
@@ -59,36 +73,39 @@ def start_task():
         "logs": [
             "[SYSTEM] Task initialization requested.",
             f"[REGISTERED] Task ID assigned: {task_id}",
-            f"[FILE LOADED] Loaded {len(messages)} messages successfully.",
+            f"[FILE LOADED] Loaded {len(messages)} messages successfully to disk.",
             "[AUTHENTICATING] Validating session payload structure..."
         ]
     }
+    save_db(db)
     return jsonify({"status": "success", "taskId": task_id})
 
-# 2. टास्क स्टॉप करने का नया एंडपॉइंट
 @app.route('/api/stop-task', methods=['POST'])
 def stop_task():
     data = request.json
     task_id = data.get('taskId')
     
-    if task_id in ACTIVE_TASKS:
-        ACTIVE_TASKS[task_id]["status"] = "STOPPED"
-        ACTIVE_TASKS[task_id]["logs"].append("[STOPPED] Termination signal received from user.")
+    db = load_db()
+    if task_id in db:
+        db[task_id]["status"] = "STOPPED"
+        db[task_id]["logs"].append("[STOPPED] Termination signal received from user.")
+        save_db(db)
         return jsonify({"status": "success", "message": f"Task {task_id} has been stopped."})
     
     return jsonify({"status": "error", "message": "Task ID not found."}), 404
 
-# 3. लाइव लॉग्स स्ट्रीम एंडपॉइंट
 @app.route('/api/stream-logs/<task_id>')
 def stream_logs(task_id):
     def generate():
         time.sleep(0.5)
-        if task_id not in ACTIVE_TASKS:
-            error_data = {"message": "[ERROR] Invalid Task ID", "type": "error"}
+        
+        db = load_db()
+        if task_id not in db:
+            error_data = {"message": f"[ERROR] Task ID {task_id} not found on server database.", "type": "error"}
             yield f"data: {json.dumps(error_data)}\n\n"
             return
 
-        task = ACTIVE_TASKS[task_id]
+        task = db[task_id]
         
         for initial_log in task["logs"]:
             log_data = {"message": initial_log, "type": "info"}
@@ -114,11 +131,17 @@ def stream_logs(task_id):
         part1, part2, part3 = "https://www.", "facebook", ".com/api/graphql/"
         fb_endpoint = part1 + part2 + part3
 
-        # लूप तब तक चलेगा जब तक स्टेटस RUNNING रहेगा
-        while task["status"] == "RUNNING":
+        # हर बार डेटाबेस से ताज़ा स्टेटस रीड करना
+        while True:
+            current_db = load_db()
+            if task_id not in current_db or current_db[task_id]["status"] != "RUNNING":
+                break
+                
+            current_task = current_db[task_id]
+
             try:
-                raw_msg = task["messages"][msg_index]
-                final_msg = f"{task['prefix']} {raw_msg}".strip()
+                raw_msg = current_task["messages"][msg_index]
+                final_msg = f"{current_task['prefix']} {raw_msg}".strip()
 
                 queue_msg = {"message": f"[QUEUE] Sending message line #{msg_index + 1}...", "type": "info"}
                 yield f"data: {json.dumps(queue_msg)}\n\n"
@@ -127,31 +150,31 @@ def stream_logs(task_id):
                     "doc_id": "99999999999999", 
                     "variables": json.dumps({
                         "client_mutation_id": str(random.randint(1, 9)),
-                        "actor_id": task["cookies"].get("c_user"),
-                        "thread_id": task["target_uid"],
+                        "actor_id": current_task["cookies"].get("c_user"),
+                        "thread_id": current_task["target_uid"],
                         "body": final_msg
                     })
                 }
 
                 response = session.post(fb_endpoint, data=payload, timeout=15)
-                target = task["target_uid"]
+                target = current_task["target_uid"]
                 
                 if response.status_code == 200:
                     success_msg = {"message": f"[SUCCESS] Delivered to Thread {target}. Content: {final_msg}", "type": "success"}
                     yield f"data: {json.dumps(success_msg)}\n\n"
                 else:
-                    warn_msg = {"message": f"[WARN] Server responded with code {response.status_code}.", "type": "error"}
+                    # यदि फेसबुक 400 या कोई ब्लॉक एरर देता है, तो भी बोट क्रैश नहीं होगा और लूप चलता रहेगा
+                    warn_msg = {"message": f"[WARN] Server responded with code {response.status_code}. (Check if cookies are still fresh)", "type": "error"}
                     yield f"data: {json.dumps(warn_msg)}\n\n"
 
-                msg_index = (msg_index + 1) % len(task["messages"])
+                msg_index = (msg_index + 1) % len(current_task["messages"])
 
             except Exception as e:
                 err_msg = {"message": f"[ERROR] Thread Exception: {str(e)}", "type": "error"}
                 yield f"data: {json.dumps(err_msg)}\n\n"
 
-            time.sleep(task["delay"])
+            time.sleep(current_task["delay"])
 
-        # लूप से बाहर आने पर (STATUS == STOPPED होने पर)
         stop_log = {"message": "[SYSTEM] Automation loop stopped safely.", "type": "error"}
         yield f"data: {json.dumps(stop_log)}\n\n"
 
