@@ -1,213 +1,293 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Automation Bot</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Messenger API Sender</title>
+
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #fce4ec; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .bot-container { background-color: #ffffff; width: 100%; max-width: 450px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); padding: 25px; border: 1px solid #f8bbd0; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #d81b60; font-size: 24px; margin-bottom: 5px; }
-        .header p { color: #666; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
-        .badge-info { background-color: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; padding: 10px; border-radius: 8px; font-size: 12px; text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #495057; margin-bottom: 6px; }
-        .form-group input[type="text"], .form-group input[type="number"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; background-color: #fff5f8; color: #333; outline: none; }
-        .form-group textarea { height: 70px; font-family: monospace; font-size: 12px; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .btn-check { background-color: #00897b; color: white; }
-        .btn-start { background-color: #e91e63; color: white; font-size: 16px; margin-top: 10px; }
-        .btn-stop { background-color: #d32f2f; color: white; font-size: 16px; display: none; margin-top: 10px; }
-        .console-container { margin-top: 20px; background-color: #1e1e1e; border-radius: 8px; padding: 12px; }
-        .console-header { color: #aaa; font-size: 11px; font-family: monospace; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .live-console { height: 160px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #00ff00; line-height: 1.5; white-space: pre-wrap; }
-        .task-id-display { background-color: #e1f5fe; border: 1px solid #b3e5fc; color: #0277bd; padding: 8px; border-radius: 6px; font-size: 13px; font-family: monospace; margin-top: 10px; text-align: center; display: none; font-weight: bold; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: #fce4ec;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 460px;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 5px 20px rgba(0,0,0,.12);
+        }
+
+        h1 {
+            text-align: center;
+            color: #d81b60;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #777;
+            font-size: 12px;
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #444;
+        }
+
+        .group {
+            margin-bottom: 16px;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 11px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: #e91e63;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            background: #e91e63;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+
+        .console {
+            margin-top: 20px;
+            background: #1e1e1e;
+            color: #00ff00;
+            min-height: 150px;
+            max-height: 250px;
+            overflow-y: auto;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+
+        .note {
+            margin-top: 14px;
+            padding: 10px;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #795548;
+        }
     </style>
 </head>
+
 <body>
 
-<div class="bot-container">
-    <div class="header">
-        <h1>Messenger Automation Bot</h1>
-        <p>DEVELOPED BY : RAJ MISHRA</p>
+<div class="container">
+
+    <h1>Messenger API Sender</h1>
+
+    <div class="subtitle">
+        Official API based sender
     </div>
 
-    <div class="badge-info">♻️ 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin</div>
-
-    <div class="form-group">
-        <label>Messenger Cookie String:</label>
-        <textarea id="cookies" placeholder="c_user=...; xs=...; datr=...;"></textarea>
+    <div class="group">
+        <label>Page Access Token</label>
+        <input
+            id="pageToken"
+            type="password"
+            placeholder="Paste Page Access Token"
+            autocomplete="off"
+        >
     </div>
 
-    <button class="btn btn-check" onclick="validateFormat()">🔍 CHECK COOKIES</button>
-
-    <div class="form-group">
-        <label>Target UID / Thread ID:</label>
-        <input type="text" id="targetUid" placeholder="e.g. 1000XXXXXXXXXX">
+    <div class="group">
+        <label>Recipient PSID</label>
+        <input
+            id="recipientPsid"
+            type="text"
+            placeholder="Recipient PSID"
+        >
     </div>
 
-    <div class="form-group">
-        <label>E2EE 6-Digit PIN (Optional):</label>
-        <input type="text" id="e2eePin" placeholder="e.g. 123456" maxlength="6">
+    <div class="group">
+        <label>Message</label>
+        <textarea
+            id="message"
+            placeholder="Type your message..."
+        ></textarea>
     </div>
 
-    <div class="form-group">
-        <label>Message Prefix (Optional):</label>
-        <input type="text" id="prefix" placeholder="e.g. [RAJ]">
+    <button id="sendBtn" onclick="sendMessage()">
+        Send Message
+    </button>
+
+    <div class="console" id="console">
+[SYSTEM] Ready.
     </div>
 
-    <!-- फाइल अपलोड फ़ील्ड -->
-    <div class="form-group">
-        <label>Messages Text File (.txt):</label>
-        <input type="file" id="txtFile" accept=".txt">
+    <div class="note">
+        Use a valid Page Access Token and a recipient PSID for a
+        recipient who is eligible to receive messages from your Page.
     </div>
 
-    <div class="form-group">
-        <label>Delay (In Seconds):</label>
-        <input type="number" id="delay" value="120">
-    </div>
-
-    <!-- बटन कंट्रोल्स -->
-    <button id="startBtn" class="btn btn-start" onclick="submitToBackend()">🚀 Start Messenger Bot</button>
-    <button id="stopBtn" class="btn btn-stop" onclick="stopBackendTask()">🛑 Stop Messenger Bot</button>
-
-    <div id="taskIdBox" class="task-id-display"></div>
-
-    <div class="console-container">
-        <div class="console-header">
-            <span>LIVE OPERATIONAL LOGS</span>
-            <span id="statusText">STATUS: IDLE</span>
-        </div>
-        <div id="consoleLog" class="live-console">[SYSTEM] Panel standing by. Enter parameters...</div>
-    </div>
 </div>
 
 <script>
-    let stream = null;
-    let activeTaskId = null;
+function log(message) {
+    const consoleBox = document.getElementById("console");
 
-    function appendLog(message, type = 'info') {
-        const consoleLog = document.getElementById('consoleLog');
-        const now = new Date().toLocaleTimeString();
-        let hex = '#00ff00';
-        if (type === 'error') hex = '#ff3333';
-        if (type === 'success') hex = '#33ffff';
-        
-        consoleLog.innerHTML += `<span style="color: ${hex}">[${now}] ${message}</span>\n`;
-        consoleLog.scrollTop = consoleLog.scrollHeight;
+    const time = new Date().toLocaleTimeString();
+
+    consoleBox.textContent +=
+        `\n[${time}] ${message}`;
+
+    consoleBox.scrollTop = consoleBox.scrollHeight;
+}
+
+
+async function sendMessage() {
+
+    const button = document.getElementById("sendBtn");
+
+    const pageAccessToken =
+        document.getElementById("pageToken").value.trim();
+
+    const recipientPsid =
+        document.getElementById("recipientPsid").value.trim();
+
+    const message =
+        document.getElementById("message").value.trim();
+
+
+    if (!pageAccessToken) {
+        log("[ERROR] Page Access Token missing.");
+        return;
     }
 
-    function validateFormat() {
-        const str = document.getElementById('cookies').value;
-        if(str.includes('c_user') && str.includes('xs')) {
-            appendLog("Cookie format checked. Ready to start.", "success");
+    if (!recipientPsid) {
+        log("[ERROR] Recipient PSID missing.");
+        return;
+    }
+
+    if (!message) {
+        log("[ERROR] Message is empty.");
+        return;
+    }
+
+
+    button.disabled = true;
+    log("[SYSTEM] Sending request to server...");
+
+
+    try {
+
+        const response = await fetch(
+            "/api/send-message",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    pageAccessToken: pageAccessToken,
+                    recipientPsid: recipientPsid,
+                    message: message
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (data.status === "success") {
+
+            log("[SUCCESS] " + data.message);
+
+            if (data.result) {
+                log(
+                    "[API] " +
+                    JSON.stringify(data.result)
+                );
+            }
+
         } else {
-            appendLog("Format verification warning: c_user or xs missing.", "error");
-        }
-    }
 
-    function parseTextFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const lines = e.target.result.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-                resolve(lines);
-            };
-            reader.onerror = (e) => reject(e);
-            reader.readAsText(file);
-        });
-    }
+            log(
+                "[ERROR] " +
+                (data.message || "Message failed.")
+            );
 
-    async function submitToBackend() {
-        const cookies = document.getElementById('cookies').value.trim();
-        const targetUid = document.getElementById('targetUid').value.trim();
-        const delay = document.getElementById('delay').value;
-        const prefix = document.getElementById('prefix').value;
-        const fileInput = document.getElementById('txtFile');
-
-        if (!cookies || !targetUid) {
-            alert("क्रिटिकल पैरामीटर्स (Cookies & UID) खाली नहीं हो सकते!");
-            return;
-        }
-
-        if (fileInput.files.length === 0) {
-            alert("कृपया संदेशों वाली एक .txt फाइल अपलोड करें!");
-            return;
-        }
-
-        appendLog("Reading uploaded text file contents...", "info");
-        let messages = await parseTextFile(fileInput.files[0]);
-
-        try {
-            const res = await fetch('/api/start-task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cookies, targetUid, delay, prefix, messages })
-            });
-            const data = await res.json();
-
-            if (data.status === "success") {
-                activeTaskId = data.taskId;
-                
-                document.getElementById('taskIdBox').style.display = "block";
-                document.getElementById('taskIdBox').innerText = `Active ID: ${activeTaskId}`;
-                
-                // बटन बदलना (स्टार्ट छुपाना, स्टॉप दिखाना)
-                document.getElementById('startBtn').style.display = "none";
-                document.getElementById('stopBtn').style.display = "block";
-                
-                document.getElementById('statusText').innerText = "STATUS: ACTIVE";
-                document.getElementById('statusText').style.color = "#33ffff";
-
-                if (stream) stream.close();
-
-                stream = new EventSource(`/api/stream-logs/${activeTaskId}`);
-                stream.onmessage = function(e) {
-                    const dataObj = JSON.parse(e.data);
-                    appendLog(dataObj.message, dataObj.type);
-                    
-                    if (dataObj.message.includes("[SYSTEM] Automation loop stopped")) {
-                        resetUI();
-                    }
-                };
-            } else {
-                appendLog(`Engine Rejected: ${data.message}`, "error");
+            if (data.code) {
+                log("[META CODE] " + data.code);
             }
-        } catch (err) {
-            appendLog("Server connection interrupted.", "error");
-        }
-    }
 
-    async function stopBackendTask() {
-        if (!activeTaskId) return;
-        appendLog(`Sending termination signal for ${activeTaskId}...`, "info");
-        
-        try {
-            const res = await fetch('/api/stop-task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ taskId: activeTaskId })
-            });
-            const data = await res.json();
-            
-            if (data.status === "success") {
-                appendLog("Task stopped successfully.", "success");
-                resetUI();
+            if (data.http_status) {
+                log(
+                    "[HTTP STATUS] " +
+                    data.http_status
+                );
             }
-        } catch (err) {
-            appendLog("Failed to connect to stop engine.", "error");
         }
-    }
 
-    function resetUI() {
-        if (stream) stream.close();
-        document.getElementById('startBtn').style.display = "block";
-        document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('statusText').innerText = "STATUS: STOPPED";
-        document.getElementById('statusText').style.color = "#ff3333";
+    } catch (error) {
+
+        log(
+            "[ERROR] Request failed: " +
+            error.message
+        );
+
+    } finally {
+
+        button.disabled = false;
     }
+}
 </script>
+
 </body>
 </html>
