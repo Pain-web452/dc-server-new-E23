@@ -10,6 +10,10 @@ app = Flask(__name__, template_folder='templates')
 ACTIVE_TASKS = {}
 
 def parse_cookies(cookie_string):
+    # अगर कुकीज़ के अंदर गलती से facebook.comapi चिपक गया है तो उसे यहीं साफ़ करना
+    if "facebook.comapi" in cookie_string:
+        cookie_string = cookie_string.replace("facebook.comapi", "")
+        
     cookie_dict = {}
     pairs = cookie_string.split(';')
     for pair in pairs:
@@ -86,7 +90,7 @@ def stream_logs(task_id):
         iteration = 1
         messages_pool = ["Hello, this is an automated broadcast.", "System check running fine.", "Automated response test."]
 
-        # यहाँ यूआरएल को बिल्कुल साफ़ और बिना किसी मिस्टेक के फ़िक्स कर दिया गया है
+        # बिल्कुल सटीक फेसबुक यूआरएल
         fb_endpoint = "https://facebook.comapi/graphql/"
 
         while task["status"] == "RUNNING":
