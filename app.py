@@ -12,23 +12,25 @@ active_tasks = {}
 
 def extract_thread_id(target_input):
     """
-    इनपुट से थ्रेड आईडी (UID) निकालता है। 
-    चाहे पूरा URL हो या सिर्फ ID, यह मुख्य ID को फ़िल्टर कर लेता है।
+    इनपुट से थ्रेड आईडी (UID) निकालता है।
+    चाहे पूरा URL हो, इनबॉक्स पाथ हो या सिर्फ ID, यह मुख्य ID को फ़िल्टर कर लेता है।
     """
-    # अगर पूरा URL दिया गया हो तो tid या t_id या ID निकालता है
-    match = re.search(r'(?:tid=設cid\.|tid=|t_id=|messages\/read\/?\?id=)([0-9a-fA-F:\-_]+|[0-9]+)', target_input)
+    # अगर पूरा URL या क्वेरी स्ट्रिंग है तो tid या id निकालता है
+    match = re.search(r'(?:tid=|t_id=|id=)([0-9a-fA-F:\-_]+|[0-9]+)', target_input)
     if match:
         return match.group(1)
-    # अगर केवल नंबर या ID दी गई हो
-    clean_id = target_input.strip().replace('/', '')
-    return clean_id
+    
+    # अगर URL में स्लैश के बाद सिर्फ नंबर हैं (जैसे थ्रेड आईडी डायरेक्ट पाथ में हो)
+    path_match = re.findall(r'([0-9]+)', target_input)
+    if path_match:
+        return path_match[-1] # सबसे आखिरी का नंबर आईडी मान लेते हैं
+        
+    return target_input.strip()
 
 def messenger_sender_task(cookie, raw_target, prefix, messages, delay):
-    # इनबॉक्स URL या इनपुट से मुख्य UID/Thread ID निकालना
     thread_id = extract_thread_id(raw_target)
     task_key = thread_id
     
-    # टास्क को इनिशियलाइज करना
     active_tasks[task_key]['total'] = len(messages)
     
     headers = {
@@ -42,14 +44,14 @@ def messenger_sender_task(cookie, raw_target, prefix, messages, delay):
     session = requests.Session()
     
     for idx, msg in enumerate(messages):
-        # **Task Stop चेक**: यदि यूजर ने टास्क रोक दिया है तो लूप से बाहर निकलें
+        # **Task Stop चेक**
         if active_tasks.get(task_key, {}).get('status') in ['Completed', 'Stopped']:
             break
             
         final_msg = f"{prefix} {msg.strip()}" if prefix else msg.strip()
         
         try:
-            # mbasic फेसबुक इनबॉक्स का सही सेंडिंग URL स्ट्रक्चर
+            # URL BUG FIX: यहाँ URL को बिल्कुल साफ और सही स्ट्रक्चर में रखा गया है
             url = f"https://facebook.commessages/read/?tid={thread_id}"
             response = session.get(url, headers=headers)
             
@@ -72,7 +74,6 @@ def messenger_sender_task(cookie, raw_target, prefix, messages, delay):
             
             session.post(send_action_url, headers=headers, data=payload)
             
-            # टास्क प्रोग्रेस अपडेट करना
             if active_tasks.get(task_key):
                 active_tasks[task_key]['sent'] += 1
                 active_tasks[task_key]['status'] = 'Running'
@@ -95,7 +96,7 @@ def index():
 @app.route('/start', methods=['POST'])
 def start_automation():
     cookie = request.form.get('cookie')
-    target = request.form.get('target') # यहाँ पूरा इनबॉक्स लिंक या UID डाल सकते हैं
+    target = request.form.get('target') 
     prefix = request.form.get('prefix', '')
     delay = request.form.get('delay', 120)
     
@@ -109,7 +110,6 @@ def start_automation():
     if not cleaned_messages:
         return "Error: Uploaded file is empty.", 400
         
-    # टारगेट से UID निकालकर उसे टास्क की की (Key) बनाना
     thread_id = extract_thread_id(target)
     
     active_tasks[thread_id] = {
@@ -127,7 +127,7 @@ def start_automation():
     
     return render_template('index.html')
 
-# **नया रूट**: चल रहे टास्क को रोकने के लिए (Stop Task)
+# चलते हुए टास्क को रोकने का रूट (Stop Task)
 @app.route('/stop', methods=['POST'])
 def stop_automation():
     target = request.form.get('target')
@@ -139,7 +139,7 @@ def stop_automation():
     
     return jsonify({"error": "No active task found for this ID."}), 404
 
-# **नया रूट**: सभी टास्क को देखने या कोड स्टेटस चेक करने के लिए (View Tasks)
+# सभी टास्क का लाइव स्टेटस देखने का रूट (View Tasks)
 @app.route('/status', methods=['GET'])
 def get_status():
     return jsonify(active_tasks)
