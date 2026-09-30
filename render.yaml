@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: fb-inbox-bot
+    env: python
+    buildCommand: pip install -r requirements.txt && playwright install chromium
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.14
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/src/.cache/ms-playwright
+        
