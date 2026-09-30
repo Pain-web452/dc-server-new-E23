@@ -8,6 +8,7 @@ app.use(express.static(path.join(__dirname)));
 
 const activeBotSessions = {};
 
+// कुकी को सही तरीके से कन्वर्ट करने और डोमेन फिक्स करने का फंक्शन
 function parseCookieToAppState(cookieStr) {
     const appState = [];
     const pairs = cookieStr.split(';');
@@ -16,11 +17,16 @@ function parseCookieToAppState(cookieStr) {
         if (parts.length >= 2) {
             const key = parts[0].trim();
             const value = parts.slice(1).join('=').trim();
+            
+            // मैसेंजर लॉगिन के लिए .facebook.com डोमेन होना ज़रूरी है
             appState.push({
                 key: key,
                 value: value,
                 domain: "facebook.com",
-                path: "/"
+                path: "/",
+                hostOnly: false,
+                creation: new Date().toISOString(),
+                lastAccessed: new Date().toISOString()
             });
         }
     });
@@ -29,22 +35,45 @@ function parseCookieToAppState(cookieStr) {
 
 app.post('/api/start-messenger', (req, res) => {
     const { cookie, targetId, pin, prefix, messages, delay } = req.body;
+    
+    if (!cookie || !targetId) {
+        return res.status(400).json({ success: false, message: "Cookie and Target ID are required!" });
+    }
+
     const appState = parseCookieToAppState(cookie);
     const taskId = Math.random().toString(36).substring(7);
     let msgIndex = 0;
 
-    login({ appState: appState }, (err, api) => {
+    // फेसबुक सिक्योरिटी को बाईपास करने के लिए रियल मोबाइल एजेंट कॉन्फ़िगरेशन
+    const loginOptions = {
+        appState: appState,
+        userAgent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+    };
+
+    login(loginOptions, (err, api) => {
         if (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: "Invalid Cookie or Checkpoint Triggered." });
+            console.error("FCA Login Detail Error:", err);
+            
+            // यूजर को साफ शब्दों में एरर बताना
+            let errorMsg = "Invalid Cookie or Checkpoint Triggered.";
+            if (err.error === "login-approval") {
+                errorMsg = "Checkpoint Triggered! Please approve login from your FB App.";
+            } else if (err.error === "wrong-password") {
+                errorMsg = "Cookie session has expired. Please grab a new cookie.";
+            }
+            
+            return res.status(500).json({ success: false, message: errorMsg, details: err });
         }
 
-        // E2EE सेटिंग्स कॉन्फ़िगरेशन
-        if (pin && typeof api.setOptions === 'function') {
-            api.setOptions({ listenEvents: true, selfListen: false, forceLogin: true });
-        }
+        // E2EE पिन और आवश्यक सेटिंग्स
+        api.setOptions({
+            listenEvents: false,
+            selfListen: false,
+            forceLogin: true,
+            userAgent: "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+        });
 
-        console.log(`[${taskId}] Bot authenticated and ready for IB messages.`);
+        console.log(`[${taskId}] Bot logged in successfully!`);
 
         const timerId = setInterval(() => {
             if (messages.length === 0) return;
@@ -54,9 +83,9 @@ app.post('/api/start-messenger', (req, res) => {
 
             api.sendMessage(finalMessage, targetId, (msgErr) => {
                 if (msgErr) {
-                    console.log(`[${taskId}] Send Error to ID ${targetId}:`, msgErr);
+                    console.log(`[${taskId}] Message Delivery Failed:`, msgErr);
                 } else {
-                    console.log(`[${taskId}] Message sent to IB: "${finalMessage}"`);
+                    console.log(`[${taskId}] Sent to IB: "${finalMessage}"`);
                 }
             });
 
@@ -68,6 +97,5 @@ app.post('/api/start-messenger', (req, res) => {
     });
 });
 
-// Render के पोर्ट डायनामिक्स को संभालने के लिए संपादन
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
