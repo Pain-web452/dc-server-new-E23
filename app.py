@@ -31,14 +31,16 @@ def messenger_sender_task(cookie, target, prefix, messages, delay):
         
         try:
             # FIXED: Added missing slash after facebook.com
-            url = f"https://facebook.commessages/read/?tid={target}"
+            url = f"https://facebook.com{target}"
+        
             response = session.get(url, headers=headers)
             
             fb_dtsg = ""
             if 'name="fb_dtsg" value="' in response.text:
                 fb_dtsg = response.text.split('name="fb_dtsg" value="')[1].split('"')[0]
                 
-            # FIXED: Added missing slash after facebook.com
+            send_action_url = "https://facebook.com?"
+            
             send_action_url = "https://facebook.commessages/send/?"
             payload = {
                 'fb_dtsg': fb_dtsg,
