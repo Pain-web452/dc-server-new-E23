@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: fb-messenger-web-task
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "false"
