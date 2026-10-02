@@ -1,7 +1,12 @@
 from flask import Flask, render_template, request, jsonify
-import requests
 import time
 import threading
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 app = Flask(__name__)
 
@@ -11,65 +16,109 @@ loop_thread = None
 
 def add_log(prefix_tag, text):
     time_now = time.strftime("%H:%M:%S")
-    # पहली इमेज के अनुसार लॉग फॉर्मेट तैयार करना
-    log_entry = f"<span style='color:#ff007f;'>{prefix_tag}</span><br>[{time_now} AM] ✅ Sent:<br>\"{text}\"<br>-----------------------"
+    log_entry = f"<span style='color:#ff007f;'>{prefix_tag}</span><br>[{time_now}] ✅ Sent:<br>\"{text}\"<br>-----------------------"
     live_logs.append(log_entry)
     if len(live_logs) > 50:
         live_logs.pop(0)
 
-def send_e2ee_loop(cookies, target_id, delay, messages, prefix, e2ee_pin):
+def inject_cookies_to_browser(driver, raw_cookies):
+    # c_user=123; xs=abc फॉर्मेट से कुकीज निकालकर ब्राउज़र में सेट करना
+    pairs = raw_cookies.split(';')
+    for pair in pairs:
+        if '=' in pair:
+            name, value = pair.split('=', 1)
+            driver.add_cookie({
+                'name': name.strip(),
+                'value': value.strip(),
+                'domain': '.facebook.com',
+                'path': '/'
+            })
+
+def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
     global is_running
     
-    cookie_list = [c.strip() for c in cookies.split('\n') if c.strip()]
+    cookie_list = [c.strip() for c in cookies_raw.split('\n') if c.strip()]
     message_list = [m.strip() for m in messages.split('\n') if m.strip()]
+    
+    if not cookie_list or not message_list:
+        add_log("SYSTEM ERROR", "कुकीज़ या मैसेज लिस्ट खाली है।")
+        is_running = False
+        return
+
+    # Render एनवायरनमेंट के लिए Chrome बाइनरी सेट करना
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new") 
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    # Render पर Buildpack द्वारा इंस्टॉल किए गए Chrome का पाथ
+    options.binary_location = "/opt/render/project/.render/chrome/opt/google/chrome/chrome"
+
+    # Chromium Driver पाथ सेट करना
+    chrome_driver_path = "/opt/render/project/.render/chromedriver/chromedriver"
+    
+    try:
+        service = Service(executable_path=chrome_driver_path)
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        add_log("DRV ERROR", f"ड्राइवर इनिशियलाइज़ेशन फेल: {str(e)}")
+        is_running = False
+        return
     
     cookie_index = 0
     message_index = 0
     
-    while is_running:
-        current_cookie = cookie_list[cookie_index]
-        base_message = message_list[message_index]
+    try:
+        # फेसबुक पर जाकर कुकी इंजेक्ट करना
+        driver.get("https://facebook.com")
+        time.sleep(2)
         
-        # मैसेज प्रीफिक्स जोड़ना (जैसे [RAJ] TESTING E2EE)
-        final_message = f"{prefix} {base_message}" if prefix else base_message
-        
-        try:
-            # E2EE मैसेंजर थ्रेड्स के लिए mbasic या graphql के थ्रू फॉर्म सबमिशन हैंडल करना
-            fb_url = "https://facebook.com"
+        while is_running:
+            # हर लूप में वर्तमान कुकी डालना (अगर मल्टीपल कुकीज़ हैं)
+            current_cookie = cookie_list[cookie_index]
+            inject_cookies_to_browser(driver, current_cookie)
             
-            payload = {
-                't_id': target_id,
-                'body': final_message,
-                'send': 'Send'
-            }
+            base_message = message_list[message_index]
+            final_message = f"{prefix} {base_message}" if prefix else base_message
             
-            # अगर E2EE पिन मौजूद है, तो पेलोड में पिन की क्रेडेंशियल्स सिंक की जाती हैं
-            if e2ee_pin:
-                payload['e2ee_pin'] = e2ee_pin
-
-            headers = {
-                'Cookie': current_cookie,
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer': f'https://facebook.com{target_id}'
-            }
+            message_url = f"https://facebook.com/messages/thread/{target_id}"
+            driver.get(message_url)
+            time.sleep(3)
             
-            response = requests.post(fb_url, data=payload, headers=headers)
-            
-            if "checkpoint" in response.text or "login_form" in response.text:
-                add_log("SYSTEM ERROR", "कुकी एक्सपायर हो चुकी है या फेसबुक ने ब्लॉक किया है।")
-            else:
-                # स्क्रीनशॉट में दिखने वाला लॉग प्रीफिक्स "R3TIR3D FYT3R"
+            try:
+                # मैसेज इनपुट बॉक्स और सेंड बटन को संभालना
+                message_box = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.NAME, "body"))
+                )
+                message_box.clear()
+                message_box.send_keys(final_message)
+                
+                send_button = driver.find_element(By.NAME, "send")
+                send_button.click()
+                
                 log_prefix = prefix if prefix else "MESSENGER BOT"
                 add_log(log_prefix, final_message)
                 
-        except Exception as e:
-            add_log("ERROR", f"सेंड फेल हुआ: {str(e)}")
+            except Exception as e:
+                if "login" in driver.current_url or "checkpoint" in driver.current_url:
+                    add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर हो चुकी है या ब्लॉक है।")
+                else:
+                    add_log("ERROR", f"मैसेज भेजने में विफलता: {str(e)}")
             
-        cookie_index = (cookie_index + 1) % len(cookie_list)
-        message_index = (message_index + 1) % len(message_list)
-        
-        time.sleep(int(delay))
+            # अगले मैसेज और अगली कुकी पर शिफ्ट होना
+            cookie_index = (cookie_index + 1) % len(cookie_list)
+            message_index = (message_index + 1) % len(message_list)
+            
+            time.sleep(int(delay))
+            
+    except Exception as main_e:
+        add_log("CRITICAL ERROR", f"सिस्टम क्रैश: {str(main_e)}")
+    finally:
+        driver.quit()
+        is_running = False
+        add_log("SYSTEM", "बॉट प्रक्रिया बंद हो गई है।")
 
 @app.route('/')
 def index():
@@ -84,15 +133,14 @@ def start_task():
     data = request.json
     cookies = data.get('cookies')
     target_id = data.get('target_id')
-    delay = data.get('delay', 120)
+    delay = data.get('delay', 10)
     messages = data.get('messages')
     prefix = data.get('prefix', '')
-    e2ee_pin = data.get('e2ee_pin', '')
     
     is_running = True
-    live_logs = ["[SYSTEM] Thread Loop Started Successfully."]
+    live_logs = ["[SYSTEM] Render सर्वर पर Selenium चालू हो रहा है... कृपया प्रतीक्षा करें।"]
     
-    loop_thread = threading.Thread(target=send_e2ee_loop, args=(cookies, target_id, delay, messages, prefix, e2ee_pin))
+    loop_thread = threading.Thread(target=send_message_via_selenium, args=(cookies, target_id, delay, messages, prefix))
     loop_thread.daemon = True
     loop_thread.start()
     
@@ -109,5 +157,6 @@ def stop_task():
     return jsonify({"status": "Stopped"})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
     
