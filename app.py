@@ -2,11 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import time
 import threading
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from playwright.sync_api import sync_playwright
 
 app = Flask(__name__)
 
@@ -21,20 +17,7 @@ def add_log(prefix_tag, text):
     if len(live_logs) > 50:
         live_logs.pop(0)
 
-def inject_cookies_to_browser(driver, raw_cookies):
-    # c_user=...; xs=... फॉर्मेट से कुकीज निकालकर ब्राउज़र में सेट करना
-    pairs = raw_cookies.split(';')
-    for pair in pairs:
-        if '=' in pair:
-            name, value = pair.split('=', 1)
-            driver.add_cookie({
-                'name': name.strip(),
-                'value': value.strip(),
-                'domain': '.facebook.com',
-                'path': '/'
-            })
-
-def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
+def send_message_via_playwright(cookies_raw, target_id, delay, messages, prefix):
     global is_running
     
     cookie_list = [c.strip() for c in cookies_raw.split('\n') if c.strip()]
@@ -45,75 +28,79 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
         is_running = False
         return
 
-    # Docker के अंदर क्रोम चलाने की सबसे सुरक्षित हेडलेस सेटिंग्स
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new") 
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    
-    try:
-        # डॉकर वातावरण में क्रोम पाथ ऑटो-डिटेक्ट होता है
-        driver = webdriver.Chrome(options=options)
-    except Exception as e:
-        add_log("DRV ERROR", f"ड्राइवर इनिशियलाइज़ेशन फेल: {str(e)}")
-        is_running = False
-        return
-    
     cookie_index = 0
     message_index = 0
     
     try:
-        # फेसबुक पर जाकर कुकी इंजेक्ट करना
-        driver.get("https://facebook.com")
-        time.sleep(3)
-        
-        while is_running:
-            current_cookie = cookie_list[cookie_index]
-            inject_cookies_to_browser(driver, current_cookie)
+        with sync_playwright() as p:
+            # बिना स्क्रीन के बैकएंड में ब्राउज़र शुरू करना
+            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
             
-            base_message = message_list[message_index]
-            final_message = f"{prefix} {base_message}" if prefix else base_message
+            # यूजर एजेंट सेट करना ताकि फेसबुक ब्लॉक न करे
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
+            page = context.new_page()
             
-            # पर्सनल इनबॉक्स थ्रेड का डायरेक्ट URL
-            message_url = f"https://facebook.com/messages/thread/{target_id}"
-            driver.get(message_url)
-            time.sleep(3)
+            # सबसे पहले फेसबुक डोमेन ओपन करना
+            page.goto("https://facebook.com")
+            page.wait_for_timeout(2000)
             
-            try:
-                # mbasic पर मैसेज इनपुट बॉक्स (NAME: 'body') खोजना
-                message_box = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.NAME, "body"))
-                )
-                message_box.clear()
-                message_box.send_keys(final_message)
+            while is_running:
+                current_cookie = cookie_list[cookie_index]
                 
-                # सेंड बटन (NAME: 'send') पर क्लिक करना
-                send_button = driver.find_element(By.NAME, "send")
-                send_button.click()
+                # c_user=...; xs=... को प्लेराइट फॉर्मेट में बदलना और लोड करना
+                pairs = current_cookie.split(';')
+                playwright_cookies = []
+                for pair in pairs:
+                    if '=' in pair:
+                        name, value = pair.split('=', 1)
+                        playwright_cookies.append({
+                            'name': name.strip(),
+                            'value': value.strip(),
+                            'domain': '.facebook.com',
+                            'path': '/'
+                        })
+                context.add_cookies(playwright_cookies)
                 
-                log_prefix = prefix if prefix else "MESSENGER BOT"
-                add_log(log_prefix, final_message)
+                base_message = message_list[message_index]
+                final_message = f"{prefix} {base_message}" if prefix else base_message
                 
-            except Exception as e:
-                if "login" in driver.current_url or "checkpoint" in driver.current_url:
-                    add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर हो चुकी है या ब्लॉक है।")
-                else:
-                    add_log("ERROR", f"मैसेज सेंड फेल: {str(e)}")
-            
-            # अगले मैसेज और अकाउंट पर शिफ्ट होना
-            cookie_index = (cookie_index + 1) % len(cookie_list)
-            message_index = (message_index + 1) % len(message_list)
-            
-            time.sleep(int(delay))
+                # डायरेक्ट पर्सनल इनबॉक्स चैट लिंक पर जाना
+                message_url = f"https://facebook.com/messages/thread/{target_id}"
+                page.goto(message_url)
+                page.wait_for_timeout(3000)
+                
+                try:
+                    # मैसेज इनपुट बॉक्स (NAME: body) ढूंढना और टाइप करना
+                    page.fill("textarea[name='body']", final_message)
+                    
+                    # सेंड बटन (NAME: send) पर क्लिक करना
+                    page.click("input[name='send']")
+                    page.wait_for_timeout(2000)
+                    
+                    log_prefix = prefix if prefix else "MESSENGER BOT"
+                    add_log(log_prefix, final_message)
+                    
+                except Exception as e:
+                    if "login" in page.url or "checkpoint" in page.url:
+                        add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर या ब्लॉक हो चुकी है।")
+                    else:
+                        add_log("ERROR", f"मैसेज फेल: {str(e)}")
+                
+                # अगले मैसेज और अगली कुकी पर जाना
+                cookie_index = (cookie_index + 1) % len(cookie_list)
+                message_index = (message_index + 1) % len(message_list)
+                
+                time.sleep(int(delay))
+                
+            browser.close()
             
     except Exception as main_e:
-        add_log("CRITICAL ERROR", f"सिस्टम क्रैश: {str(main_e)}")
+        add_log("CRITICAL ERROR", f"सिस्टम क्रैश हुआ: {str(main_e)}")
     finally:
-        driver.quit()
         is_running = False
-        add_log("SYSTEM", "बॉट प्रोसेस बंद हो गई है।")
+        add_log("SYSTEM", "बॉट प्रक्रिया बंद हो गई है।")
 
 @app.route('/')
 def index():
@@ -133,9 +120,9 @@ def start_task():
     prefix = data.get('prefix', '')
     
     is_running = True
-    live_logs = ["[SYSTEM] Docker पर्यावरण में Selenium चालू हो रहा है..."]
+    live_logs = ["[SYSTEM] Render सर्वर पर ब्राउज़र ऑटोमेशन शुरू हो रहा है..."]
     
-    loop_thread = threading.Thread(target=send_message_via_selenium, args=(cookies, target_id, delay, messages, prefix))
+    loop_thread = threading.Thread(target=send_message_via_playwright, args=(cookies, target_id, delay, messages, prefix))
     loop_thread.daemon = True
     loop_thread.start()
     
