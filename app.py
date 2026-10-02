@@ -45,7 +45,7 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
         is_running = False
         return
 
-    # Render एनवायरनमेंट के लिए क्रोम ब्राउज़र सेटिंग्स
+    # Docker के अंदर क्रोम चलाने की सबसे सुरक्षित हेडलेस सेटिंग्स
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
@@ -53,13 +53,9 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
     options.add_argument("--disable-gpu")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    # Render पर मैन्युअल इंस्टॉल किए गए क्रोम और ड्राइवर के फिक्स पाथ
-    options.binary_location = "/opt/render/project/.render/chrome/opt/google/chrome/chrome"
-    chrome_driver_path = "/opt/render/project/.render/chromedriver/chromedriver"
-    
     try:
-        service = Service(executable_path=chrome_driver_path)
-        driver = webdriver.Chrome(service=service, options=options)
+        # डॉकर वातावरण में क्रोम पाथ ऑटो-डिटेक्ट होता है
+        driver = webdriver.Chrome(options=options)
     except Exception as e:
         add_log("DRV ERROR", f"ड्राइवर इनिशियलाइज़ेशन फेल: {str(e)}")
         is_running = False
@@ -74,7 +70,6 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
         time.sleep(3)
         
         while is_running:
-            # वर्तमान अकाउंट की कुकी लोड करना
             current_cookie = cookie_list[cookie_index]
             inject_cookies_to_browser(driver, current_cookie)
             
@@ -103,7 +98,7 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
                 
             except Exception as e:
                 if "login" in driver.current_url or "checkpoint" in driver.current_url:
-                    add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर हो चुकी है या फेसबुक ने ब्लॉक किया।")
+                    add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर हो चुकी है या ब्लॉक है।")
                 else:
                     add_log("ERROR", f"मैसेज सेंड फेल: {str(e)}")
             
@@ -111,15 +106,14 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
             cookie_index = (cookie_index + 1) % len(cookie_list)
             message_index = (message_index + 1) % len(message_list)
             
-            # टाइम डिले
             time.sleep(int(delay))
             
     except Exception as main_e:
-        add_log("CRITICAL ERROR", f"सिस्टम क्रैश हुआ: {str(main_e)}")
+        add_log("CRITICAL ERROR", f"सिस्टम क्रैश: {str(main_e)}")
     finally:
         driver.quit()
         is_running = False
-        add_log("SYSTEM", "बॉट प्रोसेस पूरी तरह बंद हो गई है।")
+        add_log("SYSTEM", "बॉट प्रोसेस बंद हो गई है।")
 
 @app.route('/')
 def index():
@@ -139,7 +133,7 @@ def start_task():
     prefix = data.get('prefix', '')
     
     is_running = True
-    live_logs = ["[SYSTEM] Render सर्वर पर Selenium चालू हो रहा है... कृपया प्रतीक्षा करें।"]
+    live_logs = ["[SYSTEM] Docker पर्यावरण में Selenium चालू हो रहा है..."]
     
     loop_thread = threading.Thread(target=send_message_via_selenium, args=(cookies, target_id, delay, messages, prefix))
     loop_thread.daemon = True
