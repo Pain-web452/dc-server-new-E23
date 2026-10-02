@@ -3,90 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Cookie Automation Bot</title>
+    <title>Messenger Auto Tool - E2EE</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #fff0f5; padding: 10px; margin: 0; }
-        .container { max-width: 420px; background: white; margin: 20px auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid #e91e63; }
-        h2 { color: #d81b60; margin: 0 0 5px 0; font-size: 20px; text-align: center; }
-        .alert { background-color: #e8f5e9; color: #2e7d32; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; font-weight: bold; text-align: center;}
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #fff0f5; padding: 10px; margin: 0; }
+        .container { max-width: 420px; background: white; margin: 15px auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid #e91e63; box-sizing: border-box;}
+        h2 { color: #d81b60; margin: 0 0 5px 0; font-size: 22px; text-align: center; font-weight: bold; }
+        .dev-tag { font-size: 11px; color: #666; text-align: center; font-weight: bold; letter-spacing: 1px; margin-bottom: 15px; text-transform: uppercase; }
+        .feature-badge { background-color: #e8f5e9; color: #1b5e20; padding: 10px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; border: 1px solid #c8e6c9; text-align: center; font-weight: 500; }
         .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 6px; color: #444; }
-        textarea, input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; background: #fff9fb; }
-        button { width: 100%; padding: 12px; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
-        .btn-start { background: #e91e63; }
+        label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 6px; color: #333; }
+        textarea, input[type="text"], input[type="number"], input[type="file"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; background: #fff9fb; font-size: 14px; }
+        textarea:focus, input:focus { border-color: #e91e63; outline: none; background: #fff; }
+        button { width: 100%; padding: 12px; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-check { background: #00a86b; margin-bottom: 15px; }
+        .btn-start { background: #e91e63; font-size: 15px; letter-spacing: 0.5px; }
+        
+        /* Task Monitor Style */
         .monitor-box { margin-top: 20px; padding: 15px; background: #fff; border: 1px solid #eee; border-radius: 8px; display: none; }
-        .console { background: #111; color: #39ff14; font-family: monospace; padding: 12px; height: 160px; overflow-y: auto; border-radius: 6px; font-size: 12px; }
+        .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+        .btn-group button { width: auto; padding: 6px 15px; font-size: 12px; }
+        .console { background: #111; color: #39ff14; font-family: 'Courier New', monospace; padding: 12px; height: 180px; overflow-y: auto; border-radius: 6px; font-size: 12px; line-height: 1.6; text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Messenger Cookie Automation Bot</h2>
-    <p style="text-align:center; font-size:11px; margin-top:0; color:#666;">COOKIES INBOX FLOW (PYTHON RENDER)</p>
+    <h2>Messenger Automation Bot</h2>
+    <div class="dev-tag">DEVELOPED BY : CUSTOM BOT</div>
     
-    <div class="alert">[✓] Bot Status: Live & Ready</div>
+    <div class="feature-badge">
+        ♻️ 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin
+    </div>
 
     <form id="botForm">
         <div class="form-group">
-            <label>यहाँ अपनी Facebook Cookies पेस्ट करें (एक लाइन में एक)</label>
-            <textarea id="cookies" rows="4" placeholder="c_user=xxxx; xs=xxxx;..."></textarea>
+            <label>Messenger Cookie String:</label>
+            <textarea id="cookies" rows="4" placeholder="c_user=...; xs=...; datr=...;"></textarea>
+        </div>
+
+        <button type="button" class="btn-check">🟢 CHECK COOKIES</button>
+
+        <div class="form-group">
+            <label>Target UID / Thread ID:</label>
+            <input type="text" id="targetId" placeholder="e.g. 1000XXXXXXXXX">
         </div>
 
         <div class="form-group">
-            <label>Target ID / Convo ID (IB Thread ID)</label>
-            <input type="text" id="targetId" placeholder="उदा. t_id.10000xxxxxxxx">
+            <label>E2EE 6-Digit PIN (Optional):</label>
+            <input type="text" id="e2eePin" placeholder="e.g. 123456" maxlength="6">
         </div>
 
         <div class="form-group">
-            <label>Hater Name (Optional)</label>
-            <input type="text" id="haterName" placeholder="उदा. Brand">
+            <label>Message Prefix (Optional):</label>
+            <input type="text" id="prefix" placeholder="e.g. [RAJ]">
         </div>
 
         <div class="form-group">
-            <label>मैसेज लिस्ट (हर लाइन में नया मैसेज)</label>
-            <textarea id="messages" rows="3" placeholder="मैसेज 1&#10;मैसेज 2"></textarea>
+            <label>Messages (.txt File):</label>
+            <input type="file" id="textFile" accept=".txt">
         </div>
 
         <div class="form-group">
-            <label>Delay in seconds</label>
-            <input type="number" id="delay" value="10">
+            <label>Delay (In Seconds):</label>
+            <input type="number" id="delay" value="120" min="1">
         </div>
 
         <button type="button" class="btn-start" id="startBtn" onclick="startTask()">START TASK</button>
     </form>
 
-    <!-- Task Monitor -->
+    <!-- Task Monitor (पहली इमेज के अनुसार) -->
     <div id="monitorBox" class="monitor-box">
-        <p style="margin: 0 0 10px 0;">Status: <span style="color: green; font-weight: bold;">🟢 Running Logs</span></p>
-        <button style="width: auto; background: #dc3545; padding: 5px 15px; font-size: 12px; margin-bottom: 10px;" onclick="stopTask()">STOP</button>
+        <div style="font-weight: bold; font-size: 15px; margin-bottom: 10px;">📊 Task Monitor</div>
+        <div style="font-size: 13px; margin-bottom: 10px;">Task ID: <span style="background:#eee; padding:2px 6px; border-radius:4px;">TASK-2</span></div>
+        
+        <div class="btn-group">
+            <button type="button" style="background: #eee; color: #333;" disabled>LOGS</button>
+            <button type="button" style="background: #6f42c1;">VIEW</button>
+            <button type="button" style="background: #dc3545;" onclick="stopTask()">STOP</button>
+        </div>
+        
+        <div style="display: flex; gap: 20px; font-size: 12px; margin-bottom: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+            <div>STATUS:<br><strong style="color: green; font-size:14px;">🟢 Running</strong></div>
+            <div>UPTIME:<br><strong style="color: #d81b60; font-size:14px;" id="uptimeText">0d 0h 0m 0s</strong></div>
+        </div>
+        
         <div class="console" id="logConsole"></div>
     </div>
 </div>
 
 <script>
     let logInterval = null;
+    let uptimeInterval = null;
+    let startTime = null;
+
+    function updateUptime() {
+        const now = new Date();
+        const diff = now - startTime;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        document.getElementById('uptimeText').innerText = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
 
     async function startTask() {
         const cookies = document.getElementById('cookies').value;
         const target_id = document.getElementById('targetId').value;
         const delay = document.getElementById('delay').value;
-        const hater_name = document.getElementById('haterName').value;
-        const messages = document.getElementById('messages').value;
+        const prefix = document.getElementById('prefix').value;
+        const e2ee_pin = document.getElementById('e2eePin').value;
+        const fileInput = document.getElementById('textFile');
 
-        if (!cookies || !target_id || !messages) {
-            alert("कृपया सभी फ़ील्ड्स भरें!");
+        if (!cookies || !target_id) {
+            alert("कृपया कुकीज़ और टारगेट ID ज़रूर डालें!");
             return;
         }
 
+        let messages = "Testing E2EE Automation\nMessage Loop Active";
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            messages = await file.text();
+        }
+
         document.getElementById('monitorBox').style.display = 'block';
-        const consoleLog = document.getElementById('logConsole');
-        consoleLog.innerHTML = "[SYSTEM] Render Connecting...<br>";
+        document.getElementById('logConsole').innerHTML = "[SYSTEM] Connecting to Render Server...<br>";
+        
+        startTime = new Date();
+        if(uptimeInterval) clearInterval(uptimeInterval);
+        uptimeInterval = setInterval(updateUptime, 1000);
 
         try {
             await fetch('/api/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cookies, target_id, delay, messages, hater_name })
+                body: JSON.stringify({ cookies, target_id, delay, messages, prefix, e2ee_pin })
             });
         } catch (err) {}
 
@@ -95,8 +145,8 @@
             try {
                 const res = await fetch('/api/logs');
                 const logs = await res.json();
-                consoleLog.innerHTML = logs.join('<br>');
-                consoleLog.scrollTop = consoleLog.scrollHeight;
+                document.getElementById('logConsole').innerHTML = logs.join('<br>');
+                document.getElementById('logConsole').scrollTop = document.getElementById('logConsole').scrollHeight;
             } catch (e) {}
         }, 2000);
     }
@@ -104,6 +154,7 @@
     async function stopTask() {
         await fetch('/api/stop', { method: 'POST' });
         if(logInterval) clearInterval(logInterval);
+        if(uptimeInterval) clearInterval(uptimeInterval);
         alert("टास्क रोक दिया गया है!");
     }
 </script>
