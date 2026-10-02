@@ -22,7 +22,7 @@ def add_log(prefix_tag, text):
         live_logs.pop(0)
 
 def inject_cookies_to_browser(driver, raw_cookies):
-    # c_user=123; xs=abc फॉर्मेट से कुकीज निकालकर ब्राउज़र में सेट करना
+    # c_user=...; xs=... फॉर्मेट से कुकीज निकालकर ब्राउज़र में सेट करना
     pairs = raw_cookies.split(';')
     for pair in pairs:
         if '=' in pair:
@@ -45,7 +45,7 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
         is_running = False
         return
 
-    # Render एनवायरनमेंट के लिए Chrome बाइनरी सेट करना
+    # Render एनवायरनमेंट के लिए क्रोम ब्राउज़र सेटिंग्स
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new") 
     options.add_argument("--no-sandbox")
@@ -53,10 +53,8 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
     options.add_argument("--disable-gpu")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    # Render पर Buildpack द्वारा इंस्टॉल किए गए Chrome का पाथ
+    # Render पर मैन्युअल इंस्टॉल किए गए क्रोम और ड्राइवर के फिक्स पाथ
     options.binary_location = "/opt/render/project/.render/chrome/opt/google/chrome/chrome"
-
-    # Chromium Driver पाथ सेट करना
     chrome_driver_path = "/opt/render/project/.render/chromedriver/chromedriver"
     
     try:
@@ -73,28 +71,30 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
     try:
         # फेसबुक पर जाकर कुकी इंजेक्ट करना
         driver.get("https://facebook.com")
-        time.sleep(2)
+        time.sleep(3)
         
         while is_running:
-            # हर लूप में वर्तमान कुकी डालना (अगर मल्टीपल कुकीज़ हैं)
+            # वर्तमान अकाउंट की कुकी लोड करना
             current_cookie = cookie_list[cookie_index]
             inject_cookies_to_browser(driver, current_cookie)
             
             base_message = message_list[message_index]
             final_message = f"{prefix} {base_message}" if prefix else base_message
             
+            # पर्सनल इनबॉक्स थ्रेड का डायरेक्ट URL
             message_url = f"https://facebook.com/messages/thread/{target_id}"
             driver.get(message_url)
             time.sleep(3)
             
             try:
-                # मैसेज इनपुट बॉक्स और सेंड बटन को संभालना
+                # mbasic पर मैसेज इनपुट बॉक्स (NAME: 'body') खोजना
                 message_box = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.NAME, "body"))
                 )
                 message_box.clear()
                 message_box.send_keys(final_message)
                 
+                # सेंड बटन (NAME: 'send') पर क्लिक करना
                 send_button = driver.find_element(By.NAME, "send")
                 send_button.click()
                 
@@ -103,22 +103,23 @@ def send_message_via_selenium(cookies_raw, target_id, delay, messages, prefix):
                 
             except Exception as e:
                 if "login" in driver.current_url or "checkpoint" in driver.current_url:
-                    add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर हो चुकी है या ब्लॉक है।")
+                    add_log("SYSTEM ERROR", f"कुकी नंबर {cookie_index + 1} एक्सपायर हो चुकी है या फेसबुक ने ब्लॉक किया।")
                 else:
-                    add_log("ERROR", f"मैसेज भेजने में विफलता: {str(e)}")
+                    add_log("ERROR", f"मैसेज सेंड फेल: {str(e)}")
             
-            # अगले मैसेज और अगली कुकी पर शिफ्ट होना
+            # अगले मैसेज और अकाउंट पर शिफ्ट होना
             cookie_index = (cookie_index + 1) % len(cookie_list)
             message_index = (message_index + 1) % len(message_list)
             
+            # टाइम डिले
             time.sleep(int(delay))
             
     except Exception as main_e:
-        add_log("CRITICAL ERROR", f"सिस्टम क्रैश: {str(main_e)}")
+        add_log("CRITICAL ERROR", f"सिस्टम क्रैश हुआ: {str(main_e)}")
     finally:
         driver.quit()
         is_running = False
-        add_log("SYSTEM", "बॉट प्रक्रिया बंद हो गई है।")
+        add_log("SYSTEM", "बॉट प्रोसेस पूरी तरह बंद हो गई है।")
 
 @app.route('/')
 def index():
@@ -133,7 +134,7 @@ def start_task():
     data = request.json
     cookies = data.get('cookies')
     target_id = data.get('target_id')
-    delay = data.get('delay', 10)
+    delay = data.get('delay', 30)
     messages = data.get('messages')
     prefix = data.get('prefix', '')
     
