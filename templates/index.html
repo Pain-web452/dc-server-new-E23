@@ -1,223 +1,111 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messenger Automation Bot</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #fce4ec; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .bot-container { background-color: #ffffff; width: 100%; max-width: 450px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); padding: 25px; border: 1px solid #f8bbd0; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #d81b60; font-size: 24px; margin-bottom: 5px; }
-        .header p { color: #666; font-size: 12px; font-weight: bold; letter-spacing: 1px; }
-        .badge-info { background-color: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; padding: 10px; border-radius: 8px; font-size: 12px; text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #495057; margin-bottom: 6px; }
-        .form-group input[type="text"], .form-group input[type="number"], .form-group textarea { width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; background-color: #fff5f8; color: #333; outline: none; }
-        .form-group textarea { height: 70px; font-family: monospace; font-size: 12px; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .btn-check { background-color: #00897b; color: white; }
-        .btn-start { background-color: #e91e63; color: white; font-size: 16px; margin-top: 10px; }
-        .btn-stop { background-color: #d32f2f; color: white; font-size: 16px; display: none; } /* शुरुआत में छुपा रहेगा */
-        .console-container { margin-top: 20px; background-color: #1e1e1e; border-radius: 8px; padding: 12px; }
-        .console-header { color: #aaa; font-size: 11px; font-family: monospace; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .live-console { height: 160px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #00ff00; line-height: 1.5; white-space: pre-wrap; }
-        .task-id-display { background-color: #e1f5fe; border: 1px solid #b3e5fc; color: #0277bd; padding: 8px; border-radius: 6px; font-size: 13px; font-family: monospace; margin-top: 10px; text-align: center; display: none; font-weight: bold; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger Cookie Automation Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #fff0f5; padding: 10px; margin: 0; }
+        .container { max-width: 420px; background: white; margin: 20px auto; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid #e91e63; }
+        h2 { color: #d81b60; margin: 0 0 5px 0; font-size: 20px; text-align: center; }
+        .alert { background-color: #e8f5e9; color: #2e7d32; padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 15px; font-weight: bold; text-align: center;}
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 6px; color: #444; }
+        textarea, input { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; background: #fff9fb; }
+        button { width: 100%; padding: 12px; color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .btn-start { background: #e91e63; }
+        .monitor-box { margin-top: 20px; padding: 15px; background: #fff; border: 1px solid #eee; border-radius: 8px; display: none; }
+        .console { background: #111; color: #39ff14; font-family: monospace; padding: 12px; height: 160px; overflow-y: auto; border-radius: 6px; font-size: 12px; }
+    </style>
 </head>
 <body>
 
-<div class="bot-container">
-    <div class="header">
-        <h1>Messenger Automation Bot</h1>
-        <p>DEVELOPED BY : RAJ MISHRA</p>
-    </div>
+<div class="container">
+    <h2>Messenger Cookie Automation Bot</h2>
+    <p style="text-align:center; font-size:11px; margin-top:0; color:#666;">COOKIES INBOX FLOW (PYTHON RENDER)</p>
+    
+    <div class="alert">[✓] Bot Status: Live & Ready</div>
 
-    <div class="badge-info">♻️ 12h Restart | 950MB Safe | Persistent Profile + Auto-Relogin</div>
+    <form id="botForm">
+        <div class="form-group">
+            <label>यहाँ अपनी Facebook Cookies पेस्ट करें (एक लाइन में एक)</label>
+            <textarea id="cookies" rows="4" placeholder="c_user=xxxx; xs=xxxx;..."></textarea>
+        </div>
 
-    <div class="form-group">
-        <label>Messenger Cookie String:</label>
-        <textarea id="cookies" placeholder="c_user=...; xs=...; datr=...;"></textarea>
-    </div>
+        <div class="form-group">
+            <label>Target ID / Convo ID (IB Thread ID)</label>
+            <input type="text" id="targetId" placeholder="उदा. t_id.10000xxxxxxxx">
+        </div>
 
-    <button class="btn btn-check" onclick="validateFormat()">🔍 CHECK COOKIES</button>
+        <div class="form-group">
+            <label>Hater Name (Optional)</label>
+            <input type="text" id="haterName" placeholder="उदा. Brand">
+        </div>
 
-    <div class="form-group">
-        <label>Target UID / Thread ID:</label>
-        <input type="text" id="targetUid" placeholder="e.g. 1000XXXXXXXXXX">
-    </div>
+        <div class="form-group">
+            <label>मैसेज लिस्ट (हर लाइन में नया मैसेज)</label>
+            <textarea id="messages" rows="3" placeholder="मैसेज 1&#10;मैसेज 2"></textarea>
+        </div>
 
-    <div class="form-group">
-        <label>E2EE 6-Digit PIN (Optional):</label>
-        <input type="text" id="e2eePin" placeholder="e.g. 123456" maxlength="6">
-    </div>
+        <div class="form-group">
+            <label>Delay in seconds</label>
+            <input type="number" id="delay" value="10">
+        </div>
 
-    <div class="form-group">
-        <label>Message Prefix (Optional):</label>
-        <input type="text" id="prefix" placeholder="e.g. [RAJ]">
-    </div>
+        <button type="button" class="btn-start" id="startBtn" onclick="startTask()">START TASK</button>
+    </form>
 
-    <!-- नई फ़ाइल अपलोड फ़ील्ड -->
-    <div class="form-group">
-        <label>Select Message File (.txt):</label>
-        <input type="file" id="txtFile" accept=".txt">
-    </div>
-
-    <div class="form-group">
-        <label>Delay (In Seconds):</label>
-        <input type="number" id="delay" value="120">
-    </div>
-
-    <button id="startBtn" class="btn btn-start" onclick="submitToBackend()">🚀 Start Messenger Bot</button>
-    <button id="stopBtn" class="btn btn-stop" onclick="stopBackendTask()">🛑 Stop Messenger Bot</button>
-
-    <div id="taskIdBox" class="task-id-display"></div>
-
-    <div class="console-container">
-        <div class="console-header">
-            <span>LIVE OPERATIONAL LOGS</span>
-            <span id="statusText">STATUS: IDLE</span>
-        </div>
-        <div id="consoleLog" class="live-console">[SYSTEM] Panel standing by. Enter parameters...</div>
-    </div>
+    <!-- Task Monitor -->
+    <div id="monitorBox" class="monitor-box">
+        <p style="margin: 0 0 10px 0;">Status: <span style="color: green; font-weight: bold;">🟢 Running Logs</span></p>
+        <button style="width: auto; background: #dc3545; padding: 5px 15px; font-size: 12px; margin-bottom: 10px;" onclick="stopTask()">STOP</button>
+        <div class="console" id="logConsole"></div>
+    </div>
 </div>
 
 <script>
-    let stream = null;
-    let activeTaskId = null;
+    let logInterval = null;
 
-    function appendLog(message, type = 'info') {
-        const consoleLog = document.getElementById('consoleLog');
-        const now = new Date().toLocaleTimeString();
-        let hex = '#00ff00';
-        if (type === 'error') hex = '#ff3333';
-        if (type === 'success') hex = '#33ffff';
-        
-        consoleLog.innerHTML += `<span style="color: ${hex}">[${now}] ${message}</span>\n`;
-        consoleLog.scrollTop = consoleLog.scrollHeight;
-    }
+    async function startTask() {
+        const cookies = document.getElementById('cookies').value;
+        const target_id = document.getElementById('targetId').value;
+        const delay = document.getElementById('delay').value;
+        const hater_name = document.getElementById('haterName').value;
+        const messages = document.getElementById('messages').value;
 
-    function validateFormat() {
-        const str = document.getElementById('cookies').value;
-        if(str.includes('c_user') && str.includes('xs')) {
-            appendLog("Cookie format checked. Ready to start.", "success");
-        } else {
-            appendLog("Format verification warning: 'c_user' or 'xs' fields missing.", "error");
-        }
-    }
+        if (!cookies || !target_id || !messages) {
+            alert("कृपया सभी फ़ील्ड्स भरें!");
+            return;
+        }
 
-    // फ़ाइल रीडर फंक्शन (.txt फ़ाइल को लाइनों में तोड़ने के लिए)
-    function readTextFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const lines = e.target.result.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                resolve(lines);
-            };
-            reader.onerror = (e) => reject(e);
-            reader.readAsText(file);
-        });
-    }
+        document.getElementById('monitorBox').style.display = 'block';
+        const consoleLog = document.getElementById('logConsole');
+        consoleLog.innerHTML = "[SYSTEM] Render Connecting...<br>";
 
-    async function submitToBackend() {
-        const cookies = document.getElementById('cookies').value.trim();
-        const targetUid = document.getElementById('targetUid').value.trim();
-        const delay = document.getElementById('delay').value;
-        const prefix = document.getElementById('prefix').value;
-        const fileInput = document.getElementById('txtFile');
+        try {
+            await fetch('/api/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cookies, target_id, delay, messages, hater_name })
+            });
+        } catch (err) {}
 
-        if (!cookies || !targetUid) {
-            alert("कृपया Cookies और Target UID ज़रूर भरें!");
-            return;
-        }
+        if(logInterval) clearInterval(logInterval);
+        logInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                consoleLog.innerHTML = logs.join('<br>');
+                consoleLog.scrollTop = consoleLog.scrollHeight;
+            } catch (e) {}
+        }, 2000);
+    }
 
-        if (fileInput.files.length === 0) {
-            alert("कृपया एक संदेशों वाली (.txt) फ़ाइल अपलोड करें!");
-            return;
-        }
-
-        appendLog("Reading message text file contents...", "info");
-        let messages = [];
-        try {
-            messages = await readTextFile(fileInput.files[0]);
-            if (messages.length === 0) {
-                alert("अपलोड की गई फ़ाइल खाली है!");
-                return;
-            }
-        } catch (err) {
-            appendLog("Error parsing uploaded text file.", "error");
-            return;
-        }
-
-        appendLog(`Successfully loaded ${messages.length} messages. Pushing manifest to Engine...`, "info");
-
-        try {
-            const res = await fetch('/api/start-task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cookies, targetUid, delay, prefix, messages })
-            });
-            const data = await res.json();
-
-            if (data.status === "success") {
-                activeTaskId = data.taskId;
-                
-                document.getElementById('taskIdBox').style.display = "block";
-                document.getElementById('taskIdBox').innerText = `Active ID: ${activeTaskId}`;
-                
-                // बटन बदलना (स्टार्ट छुपाना, स्टॉप दिखाना)
-                document.getElementById('startBtn').style.display = "none";
-                document.getElementById('stopBtn').style.display = "block";
-                
-                document.getElementById('statusText').innerText = "STATUS: ACTIVE";
-                document.getElementById('statusText').style.color = "#33ffff";
-
-                if (stream) stream.close();
-
-                stream = new EventSource(`/api/stream-logs/${activeTaskId}`);
-                stream.onmessage = function(e) {
-                    const dataObj = JSON.parse(e.data);
-                    appendLog(dataObj.message, dataObj.type);
-                    
-                    // अगर बोट बैकएंड से स्टॉप सिग्नल भेजे
-                    if (dataObj.message.includes("[SYSTEM] Automation loop terminated")) {
-                        resetUI();
-                    }
-                };
-            } else {
-                appendLog(`Engine Rejected: ${data.message}`, "error");
-            }
-        } catch (err) {
-            appendLog("Server connection interrupted.", "error");
-        }
-    }
-
-    // --- नया स्टॉप बोट फ्रंटएंड फंक्शन ---
-    async function stopBackendTask() {
-        if (!activeTaskId) return;
-        
-        appendLog(`Sending stop request for ${activeTaskId}...`, "info");
-        
-        try {
-            const res = await fetch('/api/stop-task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ taskId: activeTaskId })
-            });
-            const data = await res.json();
-            
-            if (data.status === "success") {
-                appendLog("Stop signal received by Cloud Server Engine.", "success");
-                resetUI();
-            }
-        } catch (err) {
-            appendLog("Failed to send stop signal to server.", "error");
-        }
-    }
-
-    function resetUI() {
-        if (stream) stream.close();
-        document.getElementById('startBtn').style.display = "block";
-        document.getElementById('stopBtn').style.display = "none";
-        
+    async function stopTask() {
+        await fetch('/api/stop', { method: 'POST' });
+        if(logInterval) clearInterval(logInterval);
+        alert("टास्क रोक दिया गया है!");
+    }
+</script>
+</body>
+</html>
