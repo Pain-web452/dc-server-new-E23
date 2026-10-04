@@ -33,6 +33,21 @@ def load_message():
         return None
 
 
+async def send_loop(client, group_id, interval):
+    await asyncio.sleep(10)
+    while bot_state["status"] == "Running":
+        try:
+            msg = load_message()
+            if msg:
+                await client.send_message(msg, group_id)
+                add_log(f"✅ Message bheja ({len(msg)} chars)")
+            else:
+                add_log("⚠️ Message file khali hai")
+        except Exception as e:
+            add_log(f"❌ Send error: {e}")
+        await asyncio.sleep(interval)
+
+
 async def bot_main(group_id, interval):
     add_log("INFO: ✅ Dashboard client connected")
     add_log("Bot status: Started")
@@ -68,21 +83,6 @@ async def bot_main(group_id, interval):
         bot_state["status"] = "Stopped"
 
 
-async def send_loop(client, group_id, interval):
-    await asyncio.sleep(10)
-    while bot_state["status"] == "Running":
-        try:
-            msg = load_message()
-            if msg:
-                await client.send_message(msg, group_id)
-                add_log(f"✅ Message bheja ({len(msg)} chars)")
-            else:
-                add_log("⚠️ Message file khali hai")
-        except Exception as e:
-            add_log(f"❌ Send error: {e}")
-        await asyncio.sleep(interval)
-
-
 def run_bot_thread(group_id, interval):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -94,15 +94,15 @@ def run_bot_thread(group_id, interval):
 
 def start_bot(group_id, interval):
     if bot_state["status"] == "Running":
-        return {"status": "already_running"}
+        return {"status": "already_running", "message": "Bot already chal raha hai"}
     thread = threading.Thread(target=run_bot_thread, args=(group_id, interval), daemon=True)
     thread.start()
     bot_state["thread"] = thread
-    return {"status": "started"}
+    return {"status": "started", "message": "Bot start ho gaya"}
 
 
 def stop_bot():
     bot_state["status"] = "Stopped"
     bot_state["client"] = None
     add_log("Bot stopped by user")
-    return {"status": "stopped"}
+    return {"status": "stopped", "message": "Bot band ho gaya"}
