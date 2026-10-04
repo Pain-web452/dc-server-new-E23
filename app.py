@@ -1,7 +1,6 @@
 import os
-import json
 from flask import Flask, render_template, request, jsonify
-from bot_engine import start_bot, stop_bot, get_logs, clear_logs, bot_state, save_uploaded_file
+from bot_engine import start_bot, stop_bot, get_logs, clear_logs, bot_state
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './'
@@ -25,7 +24,7 @@ def api_upload_cookies():
     if file.filename == '':
         return jsonify({"error": "No file selected"}), 400
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'cookies.json'))
-    return jsonify({"status": "cookies_uploaded"})
+    return jsonify({"status": "cookies_uploaded", "message": "Cookies uploaded successfully"})
 
 @app.route("/api/upload_message", methods=["POST"])
 def api_upload_message():
@@ -35,12 +34,12 @@ def api_upload_message():
     if file.filename == '':
         return jsonify({"error": "No file selected"}), 400
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'message.txt'))
-    return jsonify({"status": "message_uploaded"})
+    return jsonify({"status": "message_uploaded", "message": "Message file uploaded"})
 
 @app.route("/api/start", methods=["POST"])
 def api_start():
     data = request.json
-    group_id = data.get("group_id", "").strip()
+    group_id = str(data.get("group_id", "")).strip()
     interval = int(data.get("interval", 3600))
     
     if not group_id:
