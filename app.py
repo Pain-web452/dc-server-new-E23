@@ -1,9 +1,9 @@
 import os
+import json
 from flask import Flask, render_template, request, jsonify
 from bot_engine import start_bot, stop_bot, get_logs, clear_logs, bot_state
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = './'
 
 @app.route("/")
 def index():
@@ -16,25 +16,40 @@ def api_status():
         "logs": get_logs()
     })
 
-@app.route("/api/upload_cookies", methods=["POST"])
-def api_upload_cookies():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'cookies.json'))
-    return jsonify({"status": "cookies_uploaded", "message": "Cookies uploaded successfully"})
+@app.route("/api/save_cookies", methods=["POST"])
+def api_save_cookies():
+    """Cookies ko text box se lekar cookies.json mein save karta hai."""
+    data = request.json
+    cookies_text = data.get("cookies", "").strip()
+    
+    if not cookies_text:
+        return jsonify({"error": "Cookies khali hai"}), 400
+    
+    try:
+        # JSON validate karein
+        parsed = json.loads(cookies_text)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid JSON format. Sahi JSON daalein"}), 400
+    
+    # File mein save karein
+    with open("cookies.json", "w", encoding="utf-8") as f:
+        json.dump(parsed, f, indent=2)
+    
+    return jsonify({"status": "saved", "message": "✅ Cookies save ho gayi"})
 
-@app.route("/api/upload_message", methods=["POST"])
-def api_upload_message():
-    if 'file' not in request.files:
-        return jsonify({"error": "No file"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "No file selected"}), 400
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'message.txt'))
-    return jsonify({"status": "message_uploaded", "message": "Message file uploaded"})
+@app.route("/api/save_message", methods=["POST"])
+def api_save_message():
+    """Message ko text box se lekar message.txt mein save karta hai."""
+    data = request.json
+    message_text = data.get("message", "").strip()
+    
+    if not message_text:
+        return jsonify({"error": "Message khali hai"}), 400
+    
+    with open("message.txt", "w", encoding="utf-8") as f:
+        f.write(message_text)
+    
+    return jsonify({"status": "saved", "message": "✅ Message save ho gaya"})
 
 @app.route("/api/start", methods=["POST"])
 def api_start():
