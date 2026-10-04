@@ -1,5 +1,0 @@
-services:
-  - type: web
-    name: fb-selenium-bot
-    env: docker
-    
