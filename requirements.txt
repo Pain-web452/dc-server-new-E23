@@ -1,4 +1,2 @@
-Flask
-fbchat-muqit
-nest-asyncio2
-gunicorn
+flask==3.0.2
+gunicorn==21.2.0
