@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        #qr-container { margin: 20px auto; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Bot Control Panel</h1>
+    <div id="qr-container"></div>
+    <p>Status: <span id="status">Loading...</span></p>
+<div id="qr-container">
+  {% if qr_required %}
+  <img src="/qr.png" id="qr-image" style="width: 200px">
+  <p>Scan this QR code with WhatsApp</p>
+  {% else %}
+  <p>Already connected to WhatsApp</p>
+  {% endif %}
+</div>
+
+    <script>
+        // Fetch status from backend
+        fetch('/status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').textContent = 
+                    `Running (PID: ${data.node_pid})`;
+            });
+// Auto-refresh QR every 5 seconds
+function checkQR() {
+  fetch('/qr-status')
+    .then(response => response.json())
+    .then(data => {
+      if (data.qr_required) {
+        document.getElementById('qr-image').src = "/qr.png?" + new Date().getTime();
+      }
+    });
+}
+setInterval(checkQR, 5000);
+    </script>
+</body>
+</html>
