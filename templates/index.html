@@ -1,44 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>WhatsApp Bot</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot - Pairing Code</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-        #qr-container { margin: 20px auto; width: 200px; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #f0f2f5; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 350px;
+        }
+        h1 { color: #075e54; font-size: 22px; }
+        input {
+            width: 80%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+        }
+        button {
+            background-color: #25d366;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 85%;
+        }
+        button:hover { background-color: #128c7e; }
+        #code-display {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #075e54;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7fce3;
+            border-radius: 8px;
+            display: none;
+        }
+        .status { margin-top: 15px; font-size: 14px; color: #666; }
     </style>
 </head>
 <body>
-    <h1>WhatsApp Bot Control Panel</h1>
-    <div id="qr-container"></div>
-    <p>Status: <span id="status">Loading...</span></p>
-<div id="qr-container">
-  {% if qr_required %}
-  <img src="/qr.png" id="qr-image" style="width: 200px">
-  <p>Scan this QR code with WhatsApp</p>
-  {% else %}
-  <p>Already connected to WhatsApp</p>
-  {% endif %}
-</div>
+    <div class="container">
+        <h1>WhatsApp Pairing</h1>
+        <p>Enter your WhatsApp number (with country code):</p>
+        <input type="text" id="phone" placeholder="e.g. 919876543210">
+        <br>
+        <button onclick="getPairingCode()">Get Pairing Code</button>
+        
+        <div id="code-display"></div>
+        <p class="status" id="status">Waiting for input...</p>
+    </div>
 
     <script>
-        // Fetch status from backend
-        fetch('/status')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('status').textContent = 
-                    `Running (PID: ${data.node_pid})`;
-            });
-// Auto-refresh QR every 5 seconds
-function checkQR() {
-  fetch('/qr-status')
-    .then(response => response.json())
-    .then(data => {
-      if (data.qr_required) {
-        document.getElementById('qr-image').src = "/qr.png?" + new Date().getTime();
-      }
-    });
-}
-setInterval(checkQR, 5000);
+        async function getPairingCode() {
+            const phone = document.getElementById('phone').value;
+            const status = document.getElementById('status');
+            const codeDisplay = document.getElementById('code-display');
+
+            if (!phone || phone.length < 10) {
+                alert("Please enter a valid phone number with country code!");
+                return;
+            }
+
+            status.textContent = "Requesting code from server...";
+            codeDisplay.style.display = "none";
+
+            try {
+                const response = await fetch('/get-pairing-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone })
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    codeDisplay.textContent = data.code;
+                    codeDisplay.style.display = "block";
+                    status.textContent = "Enter this code in WhatsApp > Linked Devices > Link with phone number";
+                } else {
+                    status.textContent = "Error: " + data.error;
+                }
+            } catch (error) {
+                status.textContent = "Server error. Please try again.";
+                console.error(error);
+            }
+        }
     </script>
 </body>
 </html>
