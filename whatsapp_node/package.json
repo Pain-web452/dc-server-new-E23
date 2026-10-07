@@ -1,0 +1,9 @@
+{
+  "name": "whatsapp-node",
+  "version": "1.0.0",
+  "main": "pair.js",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "pino": "^8.0.0"
+  }
+}
