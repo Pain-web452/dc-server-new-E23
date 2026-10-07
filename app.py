@@ -1,37 +1,40 @@
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, request, jsonify
 import subprocess
-import os
+import json
 
 app = Flask(__name__)
 
-# Start Node.js process
-node_process = subprocess.Popen(
-    ["node", "whatsapp_node/index.js"],
-    cwd=os.getcwd(),
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE
-)
+# ... aapka baaki code ...
 
-@app.route("/")
-def home():
-    return render_template("index.html")  # Now renders HTML instead of JSON
+@app.route('/get-pairing-code', methods=['POST'])
+def get_pairing_code():
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone')
 
-@app.route("/status")  # New endpoint for status checks
-def status():
-    return {
-        "status": "running",
-        "node_pid": node_process.pid
-    }
+        if not phone_number:
+            return jsonify({"success": False, "error": "Phone number required"})
 
-@app.route('/qr.png')
-def serve_qr():
-    return send_from_directory('whatsapp_node', 'qr.png')
-@app.route('/qr-status')
-def qr_status():
-    return {
-        'qr_required': not os.path.exists('whatsapp_node/auth_info/creds.json')
-    }
+        # Yahan aapko Node.js script call karni padegi jo pairing code generate karegi
+        # Neeche wala command example hai (aapke whatsapp_node folder ke hisaab se badalna padega)
+        
+        # Maan lijiye aapke paas 'whatsapp_node/pair.js' file hai
+        result = subprocess.run(
+            ['node', 'whatsapp_node/pair.js', phone_number],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+        if result.returncode == 0:
+            # Node script output se code nikalna hoga (JSON format mein)
+            output = json.loads(result.stdout)
+            return jsonify({"success": True, "code": output.get("code")})
+        else:
+            return jsonify({"success": False, "error": result.stderr})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+if __name__ == '__main__':
+    app.run()
