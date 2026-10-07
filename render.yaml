@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: whatsapp-bot
+    runtime: python
+    python:
+      version: "3.10"  # Recommended stable version
+    buildCommand: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+      cd whatsapp_node && npm install
+    startCommand: |
+      gunicorn --bind :$PORT app:app
+    envVars:
+      - key: PORT
+        value: 10000  # Render's default port
+      - key: NODE_ENV
+        value: production
