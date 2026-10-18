@@ -1,314 +1,241 @@
-// ==========================================
-//   RK RAJA XWD — BACKEND SERVER
-//   Facebook Cookie Loader + Mass Sender
-// ==========================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RK RAJA XWD // ROOT ACCESS</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-const path = require("path");
-const express = require("express");
-const http = require("http");
-const cors = require("cors");
-const { Server } = require("socket.io");
-const { login } = require("anuragxarohi"); // npm install anuragxarohi
+<!-- 3D Video / Matrix BG -->
+<canvas id="matrix"></canvas>
+<video id="bgvideo" autoplay muted loop playsinline>
+  <source src="/bg.mp4" type="video/mp4" />
+</video>
+<div class="scanlines"></div>
 
-const app = express();
+<div class="wrap">
 
-// ---------- MIDDLEWARE ----------
-app.use(cors({ origin: "*" }));
-app.use(express.json({ limit: "20mb" }));
-app.use(express.static(path.join(__dirname, "public")));
+  <!-- HEADER -->
+  <div class="topbar">
+    <span class="glitch" data-text="RK RAJA XWD">RK RAJA XWD</span>
+    <span class="blink">[ ROOT@KALI:~# ]</span>
+  </div>
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
-  pingTimeout: 60000,
-  pingInterval: 25000,
-});
+  <!-- LIVE MONITOR -->
+  <div class="card">
+    <h2 class="title">▶ LIVE MONITOR</h2>
+    <div class="row"><span>&gt; UPTIME</span><b id="uptime">0h 0m 0s</b></div>
+    <div class="row"><span>&gt; ACTIVE TASKS</span><b id="activeTasks">0</b></div>
+    <div class="row"><span>&gt; MESSAGES SENT</span><b id="totalSent">0</b></div>
+    <div class="row"><span>&gt; STATUS</span><b id="connStatus" class="red">OFFLINE</b></div>
+  </div>
 
-// ---------- STATE ----------
-const tasks = {};       // taskId -> task object
-let taskCounter = 0;
-const startTime = Date.now();
+  <!-- START TASK -->
+  <div class="card">
+    <h2 class="title">▶ START TASK</h2>
 
-// ---------- HELPERS ----------
-function now() {
-  return new Date().toLocaleTimeString();
-}
+    <label class="lbl">[ Cookie Input Method ]</label>
+    <select id="cookieMethod" class="inp">
+      <option value="paste">PASTE_COOKIES</option>
+      <option value="file">UPLOAD_FILE</option>
+    </select>
 
-function parseCookies(input) {
-  const t = (input || "").trim();
-  if (!t) throw new Error("Empty cookies");
+    <div id="cookiePasteBox">
+      <label class="lbl">[ Cookies ]</label>
+      <textarea id="cookies" class="inp ta" placeholder='[{"key":"c_user","value":"..."}] OR c_user=...; xs=...;'></textarea>
+    </div>
 
-  // JSON appstate format
-  if (t.startsWith("[")) {
-    const arr = JSON.parse(t);
-    if (!Array.isArray(arr)) throw new Error("Invalid appstate JSON");
-    return arr;
-  }
+    <div id="cookieFileBox" style="display:none">
+      <label class="lbl">[ Cookie File ]</label>
+      <input type="file" id="cookieFile" accept=".json,.txt" class="file" />
+    </div>
 
-  // Raw cookie string → appstate
-  return t
-    .split(";")
-    .map((c) => {
-      const [key, ...rest] = c.trim().split("=");
-      return {
-        key: key?.trim(),
-        value: rest.join("=")?.trim(),
-        domain: ".facebook.com",
-        path: "/",
-        secure: true,
-      };
-    })
-    .filter((c) => c.key && c.value);
-}
+    <label class="lbl">[ Message File ]</label>
+    <input type="file" id="msgFile" accept=".txt,.csv" class="file" />
 
-function parseTargets(text) {
-  return (text || "")
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith("#"))
-    .map((l) => {
-      const parts = l.split("|").map((s) => s.trim());
-      if (parts.length < 2) return null;
-      const uid = parts[0];
-      const message = parts.slice(1).join(" | ");
-      if (!uid || !message) return null;
-      return { uid, message };
-    })
-    .filter(Boolean);
-}
+    <label class="lbl">[ Thread ID ]</label>
+    <input type="text" id="threadId" class="inp" placeholder="optional single target uid" />
 
-function broadcastLog(taskId, type, msg) {
-  const entry = { taskId, time: now(), type, msg };
-  console.log(`[${entry.time}] [${taskId || "SYS"}] ${msg}`);
-  io.emit("log", entry);
-}
+    <label class="lbl">[ Delay (sec) ]</label>
+    <input type="number" id="delay" class="inp" value="10" min="2" />
 
-function broadcastStats(task) {
-  if (!task) return;
-  io.emit("stats", {
-    taskId: task.id,
-    sent: task.sent,
-    failed: task.failed,
-    idx: task.idx,
-    total: task.targets.length,
+    <label class="lbl">[ Haters Name ]</label>
+    <input type="text" id="hatersName" class="inp" value="RK" />
+
+    <label class="lbl">[ Last Name ]</label>
+    <input type="text" id="lastName" class="inp" value="RAJA XWD" />
+
+    <button id="startBtn" class="btn green">▶ EXECUTE</button>
+  </div>
+
+  <!-- STOP TASK -->
+  <div class="card">
+    <h2 class="title">▶ STOP TASK</h2>
+    <label class="lbl">[ Task ID ]</label>
+    <input type="text" id="stopTaskId" class="inp" placeholder="TASK-..." />
+    <button id="stopBtn" class="btn red">■ TERMINATE</button>
+  </div>
+
+  <!-- LOG -->
+  <div class="card">
+    <h2 class="title">▶ TERMINAL LOG</h2>
+    <div id="log" class="log">&gt; Waiting for connection...<span class="cursor">_</span></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const BACKEND = window.location.hostname.includes("netlify")
+  ? "https://YOUR-RENDER-BACKEND.onrender.com"
+  : window.location.origin;
+
+const socket = io(BACKEND, { reconnection: true });
+const $ = (id) => document.getElementById(id);
+let currentTaskId = null;
+
+$("cookieMethod").onchange = () => {
+  const m = $("cookieMethod").value;
+  $("cookiePasteBox").style.display = m === "paste" ? "block" : "none";
+  $("cookieFileBox").style.display = m === "file" ? "block" : "none";
+};
+
+function readFile(input) {
+  return new Promise((res, rej) => {
+    const f = input.files[0];
+    if (!f) return res(null);
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsText(f);
   });
 }
 
-// ---------- ROUTES ----------
+$("startBtn").onclick = async () => {
+  const method = $("cookieMethod").value;
+  let cookies = method === "paste" ? $("cookies").value.trim() : ((await readFile($("cookieFile"))) || "");
+  const msgText = (await readFile($("msgFile"))) || "";
+  const threadId = $("threadId").value.trim();
 
-// Health check
-app.get("/", (req, res) => {
-  res.json({ ok: true, service: "RK RAJA XWD", uptime: process.uptime() });
-});
+  if (!cookies) return log("error", "✖ Cookies required!");
+  if (!msgText && !threadId) return log("error", "✖ Message file ya Thread ID do!");
 
-// LIVE MONITOR
-app.get("/api/monitor", (req, res) => {
-  const activeTasks = Object.values(tasks).filter((t) => t.running).length;
-  const totalSent = Object.values(tasks).reduce((s, t) => s + t.sent, 0);
-  res.json({
-    uptime: (Date.now() - startTime) / 1000,
-    activeTasks,
-    totalSent,
-    totalTasks: Object.keys(tasks).length,
-  });
-});
+  $("startBtn").disabled = true;
+  $("startBtn").textContent = "⏳ INITIALIZING...";
+  log("info", "> Injecting cookies...");
 
-// START TASK
-app.post("/api/start", async (req, res) => {
   try {
-    const {
-      cookies,
-      targetsText,
-      threadId,
-      delay,
-      hatersName,
-      lastName,
-    } = req.body;
-
-    // Validate
-    if (!cookies) {
-      return res.status(400).json({ ok: false, error: "Cookies required" });
-    }
-    if (!targetsText && !threadId) {
-      return res.status(400).json({ ok: false, error: "Message file ya Thread ID required" });
-    }
-
-    // Parse cookies
-    let appState;
-    try {
-      appState = parseCookies(cookies);
-      if (!appState.length) throw new Error("No cookies parsed");
-    } catch (e) {
-      return res.status(400).json({ ok: false, error: "Invalid cookies: " + e.message });
-    }
-
-    // Build targets
-    let targets = [];
-    if (threadId && threadId.trim()) {
-      // Single target — thread ID
-      targets = [{ uid: threadId.trim(), message: targetsText || "Hello" }];
-    } else {
-      targets = parseTargets(targetsText);
-    }
-
-    if (!targets.length) {
-      return res.status(400).json({ ok: false, error: "No valid targets (format: UID | Message)" });
-    }
-
-    // Config
-    const interval = Math.max(2000, (parseInt(delay) || 10) * 1000);
-    const header = [hatersName, lastName].filter(Boolean).join(" ").trim() || "RK RAJA XWD";
-
-    broadcastLog(null, "info", `> Injecting cookies...`);
-    broadcastLog(null, "info", `> Header: ${header}`);
-    broadcastLog(null, "info", `> Targets: ${targets.length} | Delay: ${interval}ms`);
-
-    // Login with cookies
-    login({ appState }, { online: true, selfListen: false }, (err, api) => {
-      if (err) {
-        broadcastLog(null, "error", "✖ Login failed: " + (err.error || err));
-        return res.status(401).json({
-          ok: false,
-          error: "Login failed. Cookies check karo (expired ho sakti hain).",
-        });
-      }
-
-      // Create task
-      const taskId = "TASK-" + (++taskCounter) + "-" + Date.now().toString(36);
-      const task = {
-        id: taskId,
-        api,
-        targets,
-        idx: 0,
-        running: true,
-        paused: false,
-        header,
-        interval,
-        sent: 0,
-        failed: 0,
-        startedAt: Date.now(),
-        userId: api.getCurrentUserID(),
-      };
-      tasks[taskId] = task;
-
-      broadcastLog(taskId, "success", `✔ ACCESS GRANTED | UID: ${task.userId}`);
-      broadcastLog(taskId, "info", `> Auto-send starting in 1s...`);
-
-      res.json({
-        ok: true,
-        taskId,
-        uid: task.userId,
-        total: targets.length,
-      });
-
-      // Auto-start
-      setTimeout(() => runTask(taskId), 1000);
+    const res = await fetch(BACKEND + "/api/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cookies, targetsText: msgText || threadId, threadId: threadId || null,
+        delay: $("delay").value,
+        hatersName: $("hatersName").value,
+        lastName: $("lastName").value,
+      }),
     });
-  } catch (err) {
-    console.error("Start error:", err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// RUN TASK LOOP
-function runTask(taskId) {
-  const t = tasks[taskId];
-  if (!t || !t.running || t.paused) return;
-
-  if (t.idx >= t.targets.length) {
-    t.running = false;
-    broadcastLog(taskId, "success", `🎉 MISSION COMPLETE | Sent: ${t.sent} | Failed: ${t.failed}`);
-    broadcastStats(t);
-    return;
-  }
-
-  const { uid, message } = t.targets[t.idx];
-
-  io.emit("progress", {
-    taskId,
-    currentUID: uid,
-    currentMsg: message,
-    idx: t.idx + 1,
-    total: t.targets.length,
-  });
-
-  t.api.sendMessageMqtt({ body: message }, uid, (err) => {
-    if (!t.running) return; // stopped mid-send
-
-    if (err) {
-      t.failed++;
-      broadcastLog(taskId, "error", `✖ [${t.idx + 1}/${t.targets.length}] ${uid} → FAIL`);
-    } else {
-      t.sent++;
-      broadcastLog(taskId, "success", `✔ [${t.idx + 1}/${t.targets.length}] ${uid} → SENT`);
+    const d = await res.json();
+    if (!d.ok) {
+      log("error", "✖ " + d.error);
+      $("startBtn").disabled = false;
+      $("startBtn").textContent = "▶ EXECUTE";
+      return;
     }
+    currentTaskId = d.taskId;
+    $("stopTaskId").value = d.taskId;
+    socket.emit("subscribe", d.taskId);
+    log("success", `✔ ACCESS GRANTED: ${d.taskId} | UID ${d.uid} | ${d.total} targets`);
+    $("startBtn").textContent = "✔ RUNNING";
+  } catch (e) {
+    log("error", "✖ " + e.message);
+    $("startBtn").disabled = false;
+    $("startBtn").textContent = "▶ EXECUTE";
+  }
+};
 
-    broadcastStats(t);
-    t.idx++;
-    setTimeout(() => runTask(taskId), t.interval);
+$("stopBtn").onclick = async () => {
+  const taskId = $("stopTaskId").value.trim();
+  if (!taskId) return log("error", "✖ Task ID required");
+  const res = await fetch(BACKEND + "/api/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ taskId }),
   });
+  const d = await res.json();
+  if (!d.ok) return log("error", "✖ " + d.error);
+  log("warn", "⚠ Terminate signal sent");
+  $("startBtn").disabled = false;
+  $("startBtn").textContent = "▶ EXECUTE";
+};
+
+async function refreshMonitor() {
+  try {
+    const r = await fetch(BACKEND + "/api/monitor");
+    const d = await r.json();
+    const s = Math.floor(d.uptime);
+    $("uptime").textContent = `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m ${s%60}s`;
+    $("activeTasks").textContent = d.activeTasks;
+    $("totalSent").textContent = d.totalSent;
+  } catch {}
+}
+setInterval(refreshMonitor, 2000);
+refreshMonitor();
+
+socket.on("connect", () => {
+  $("connStatus").textContent = "ONLINE";
+  $("connStatus").className = "green";
+  log("success", "✔ Backend connected");
+});
+socket.on("disconnect", () => {
+  $("connStatus").textContent = "OFFLINE";
+  $("connStatus").className = "red";
+  log("warn", "⚠ Connection lost, reconnecting...");
+});
+socket.on("connect_error", () => log("warn", "⚠ Connection lost, reconnecting..."));
+
+socket.on("log", (l) => log(l.type, l.msg));
+socket.on("progress", (p) => log("info", `> [${p.idx}/${p.total}] → ${p.currentUID}`));
+socket.on("stats", () => {});
+
+function log(type, msg) {
+  const box = $("log");
+  const t = new Date().toLocaleTimeString();
+  const line = document.createElement("div");
+  line.className = "log-line " + type;
+  line.textContent = `[${t}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  if (box.children.length > 300) box.removeChild(box.firstChild);
 }
 
-// STOP TASK
-app.post("/api/stop", (req, res) => {
-  const { taskId } = req.body;
-  const t = tasks[taskId];
-  if (!t) {
-    return res.status(404).json({ ok: false, error: "Task not found" });
-  }
-  t.running = false;
-  broadcastLog(taskId, "warn", `⚠ TERMINATED at ${t.idx}/${t.targets.length}`);
-  broadcastStats(t);
-  res.json({ ok: true });
-});
-
-// PAUSE TASK
-app.post("/api/pause", (req, res) => {
-  const { taskId } = req.body;
-  const t = tasks[taskId];
-  if (!t) return res.status(404).json({ ok: false, error: "Task not found" });
-  t.paused = true;
-  broadcastLog(taskId, "warn", `⏸ PAUSED`);
-  res.json({ ok: true });
-});
-
-// RESUME TASK
-app.post("/api/resume", (req, res) => {
-  const { taskId } = req.body;
-  const t = tasks[taskId];
-  if (!t) return res.status(404).json({ ok: false, error: "Task not found" });
-  t.paused = false;
-  broadcastLog(taskId, "info", `▶ RESUMED`);
-  runTask(taskId);
-  res.json({ ok: true });
-});
-
-// ---------- SOCKET.IO ----------
-io.on("connection", (socket) => {
-  console.log("🔌 Client connected:", socket.id);
-  socket.emit("hello", { ok: true, time: now() });
-
-  socket.on("subscribe", (taskId) => {
-    if (taskId) socket.join(taskId);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("🔌 Client disconnected:", socket.id);
-  });
-});
-
-// ---------- CLEANUP (old tasks) ----------
+// ---------- MATRIX RAIN ----------
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+let cols, drops;
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  cols = Math.floor(canvas.width / 16);
+  drops = Array(cols).fill(1);
+}
+resize();
+window.addEventListener("resize", resize);
+const chars = "RKRAJAXWD01アイウエオカキクケコサシスセソ<>/\\{}[]#$%&01";
 setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000; // 30 min
-  for (const id in tasks) {
-    if (!tasks[id].running && tasks[id].startedAt < cutoff) {
-      delete tasks[id];
-    }
+  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#00ff41";
+  ctx.font = "16px monospace";
+  for (let i = 0; i < drops.length; i++) {
+    const t = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(t, i * 16, drops[i] * 16);
+    if (drops[i] * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
   }
-}, 60000);
-
-// ---------- START SERVER ----------
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n🌐 RK RAJA XWD server running on port ${PORT}\n`);
-});
+}, 55);
+</script>
+</body>
+</html>
