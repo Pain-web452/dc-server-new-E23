@@ -1,7 +1,7 @@
 {
-  "name": "whatsapp-bot-panel",
+  "name": "peter-wp-server",
   "version": "1.0.0",
-  "description": "WhatsApp Multi-User Sender Bot with Pairing Code and Group Fetch",
+  "description": "Multi-Session WhatsApp Control Center",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
