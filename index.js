@@ -1,403 +1,314 @@
-const express = require("express");
-const fs = require("fs");
+// ==========================================
+//   RK RAJA XWD — BACKEND SERVER
+//   Facebook Cookie Loader + Mass Sender
+// ==========================================
+
 const path = require("path");
-const pino = require("pino");
-const multer = require("multer");
-const {
-  default: Gifted_Tech,
-  useMultiFileAuthState,
-  delay,
-  makeCacheableSignalKeyStore,
-  Browsers,
-} = require("maher-zubair-baileys");
+const express = require("express");
+const http = require("http");
+const cors = require("cors");
+const { Server } = require("socket.io");
+const { login } = require("anuragxarohi"); // npm install anuragxarohi
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-if (!fs.existsSync("sessions")) fs.mkdirSync("sessions");
-if (!fs.existsSync("uploads")) fs.mkdirSync("uploads");
+// ---------- MIDDLEWARE ----------
+app.use(cors({ origin: "*" }));
+app.use(express.json({ limit: "20mb" }));
+app.use(express.static(path.join(__dirname, "public")));
 
-const upload = multer({ dest: "uploads/" });
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*", methods: ["GET", "POST"] },
+  pingTimeout: 60000,
+  pingInterval: 25000,
+});
 
-const activeSessions = new Map();
-const serverStartTime = Date.now();
-let globalLogs = [
-    { time: new Date().toLocaleTimeString(), message: "Server started – PETER WP SERVER" }
-];
+// ---------- STATE ----------
+const tasks = {};       // taskId -> task object
+let taskCounter = 0;
+const startTime = Date.now();
 
-function addLog(msg) {
-    const timeStr = new Date().toLocaleTimeString();
-    globalLogs.unshift({ time: timeStr, message: msg });
-    if (globalLogs.length > 50) globalLogs.pop();
+// ---------- HELPERS ----------
+function now() {
+  return new Date().toLocaleTimeString();
 }
 
-// Neon Red Cyberpunk Theme HTML Template
-const htmlTemplate = (activeTab, bodyContent) => `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PETER WP SERVER D</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #0d0208;
-            --card-bg: #1a030d;
-            --primary: #ff0055;
-            --secondary: #ff3366;
-            --text-light: #f8f9fa;
-            --border-color: #3b071a;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-light);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
-        }
-        .container { max-width: 950px; }
-        header {
-            text-align: center;
-            margin-bottom: 25px;
-            padding: 15px;
-            background: var(--card-bg);
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 0 15px rgba(255, 0, 85, 0.2);
-        }
-        header h1 {
-            color: var(--primary);
-            font-weight: 800;
-            font-size: 1.5rem;
-            letter-spacing: 1px;
-            margin: 0;
-            text-shadow: 0 0 8px rgba(255, 0, 85, 0.4);
-        }
-        .nav-tabs-custom {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        .nav-btn {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-light);
-            border-radius: 8px;
-            font-weight: bold;
-            text-decoration: none;
-            text-transform: uppercase;
-            transition: all 0.3s;
-        }
-        .nav-btn.active, .nav-btn:hover {
-            background: var(--primary);
-            color: #000;
-            box-shadow: 0 0 12px var(--primary);
-        }
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-        }
-        .card h2 {
-            color: var(--primary);
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-        }
-        label { font-weight: 600; color: #d8b4c2; font-size: 0.9rem; margin-bottom: 5px; }
-        input, select, textarea {
-            background-color: #0d0208 !important;
-            border: 1px solid var(--border-color) !important;
-            color: #fff !important;
-            border-radius: 6px !important;
-            padding: 10px !important;
-            font-size: 0.95rem;
-        }
-        input:focus { border-color: var(--primary) !important; box-shadow: 0 0 8px rgba(255, 0, 85, 0.4) !important; }
-        button, .btn-custom {
-            background: var(--primary);
-            border: none;
-            color: #fff;
-            font-weight: bold;
-            text-transform: uppercase;
-            padding: 10px;
-            border-radius: 6px;
-            width: 100%;
-            transition: all 0.3s;
-        }
-        button:hover, .btn-custom:hover {
-            opacity: 0.9;
-            box-shadow: 0 0 12px var(--primary);
-            color: #fff;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .stat-box {
-            background: #0d0208;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-        }
-        .stat-box h4 { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; text-transform: uppercase; }
-        .stat-box .val { font-size: 1.4rem; font-weight: bold; color: var(--primary); }
-        .terminal-box {
-            background: #050103;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 12px;
-            font-family: monospace;
-            font-size: 12px;
-            height: 220px;
-            overflow-y: auto;
-            color: #00ff66;
-        }
-        .log-line { margin-bottom: 4px; border-bottom: 1px solid #110207; padding-bottom: 2px; }
-        .log-time { color: var(--primary); margin-right: 8px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>PETER WP SERVER D</h1>
-            <p class="text-muted small mb-0">Multi-Session WhatsApp Control Center</p>
-        </header>
+function parseCookies(input) {
+  const t = (input || "").trim();
+  if (!t) throw new Error("Empty cookies");
 
-        <div class="nav-tabs-custom">
-            <a href="/" class="nav-btn ${activeTab === 'dashboard' ? 'active' : ''}">Dashboard</a>
-            <a href="/bulk" class="nav-btn ${activeTab === 'bulk' ? 'active' : ''}">Bulk Sender</a>
-        </div>
+  // JSON appstate format
+  if (t.startsWith("[")) {
+    const arr = JSON.parse(t);
+    if (!Array.isArray(arr)) throw new Error("Invalid appstate JSON");
+    return arr;
+  }
 
-        ${bodyContent}
-    </div>
-</body>
-</html>
-`;
+  // Raw cookie string → appstate
+  return t
+    .split(";")
+    .map((c) => {
+      const [key, ...rest] = c.trim().split("=");
+      return {
+        key: key?.trim(),
+        value: rest.join("=")?.trim(),
+        domain: ".facebook.com",
+        path: "/",
+        secure: true,
+      };
+    })
+    .filter((c) => c.key && c.value);
+}
 
-// Dashboard Route
+function parseTargets(text) {
+  return (text || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"))
+    .map((l) => {
+      const parts = l.split("|").map((s) => s.trim());
+      if (parts.length < 2) return null;
+      const uid = parts[0];
+      const message = parts.slice(1).join(" | ");
+      if (!uid || !message) return null;
+      return { uid, message };
+    })
+    .filter(Boolean);
+}
+
+function broadcastLog(taskId, type, msg) {
+  const entry = { taskId, time: now(), type, msg };
+  console.log(`[${entry.time}] [${taskId || "SYS"}] ${msg}`);
+  io.emit("log", entry);
+}
+
+function broadcastStats(task) {
+  if (!task) return;
+  io.emit("stats", {
+    taskId: task.id,
+    sent: task.sent,
+    failed: task.failed,
+    idx: task.idx,
+    total: task.targets.length,
+  });
+}
+
+// ---------- ROUTES ----------
+
+// Health check
 app.get("/", (req, res) => {
-    let totalSessions = activeSessions.size;
-    let pairedCount = Array.from(activeSessions.values()).filter(s => s.status === "Connected").length;
-    
-    let uptimeSec = Math.floor((Date.now() - serverStartTime) / 1000);
-    let hrs = String(Math.floor(uptimeSec / 3600)).padStart(2, '0');
-    let mins = String(Math.floor((uptimeSec % 3600) / 60)).padStart(2, '0');
-    let secs = String(uptimeSec % 60).padStart(2, '0');
-    let uptimeStr = `${hrs}:${mins}:${secs}`;
-
-    let pairedListHtml = Array.from(activeSessions.entries()).map(([id, sess]) => `
-        <div class="d-flex justify-content-between align-items-center p-2 mb-2 bg-black rounded border border-secondary">
-            <div>
-                <strong>Session: ${id}</strong> | Number: ${sess.number}
-                <br><small class="text-success">Status: ${sess.status}</small>
-            </div>
-            <form action="/delete-session" method="POST" class="m-0">
-                <input type="hidden" name="sessionId" value="${id}">
-                <button type="submit" class="btn btn-sm btn-danger py-1 px-2" style="width:auto;">Delete</button>
-            </form>
-        </div>
-    `).join('') || '<p class="text-muted small text-center mb-0">No sessions yet. Add a number above.</p>';
-
-    let logsHtml = globalLogs.map(l => `
-        <div class="log-line"><span class="log-time">[${l.time}]</span> ${l.message}</div>
-    `).join('');
-
-    const content = `
-        <div class="card">
-            <h2>➕ Add WhatsApp Number</h2>
-            <form action="/add-session" method="POST">
-                <div class="mb-3">
-                    <label>Session ID (1, 2, 3...)</label>
-                    <input type="text" name="sessionId" placeholder="e.g. 1" required>
-                    <small class="text-muted">Har number ka alag session ID</small>
-                </div>
-                <div class="mb-3">
-                    <label>Phone Number (Country Code, no + or spaces)</label>
-                    <input type="text" name="number" placeholder="e.g. 919876543210" required>
-                </div>
-                <button type="submit">Get Pairing Code</button>
-            </form>
-        </div>
-
-        <div class="card">
-            <h2>📱 Paired Numbers</h2>
-            ${pairedListHtml}
-        </div>
-
-        <div class="card">
-            <h2>📊 Live Stats</h2>
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <h4>Total Sessions</h4>
-                    <div class="val">${totalSessions}</div>
-                </div>
-                <div class="stat-box">
-                    <h4>Paired</h4>
-                    <div class="val">${pairedCount}</div>
-                </div>
-                <div class="stat-box">
-                    <h4>Uptime</h4>
-                    <div class="val" style="font-size:1.1rem;">${uptimeStr}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="mb-0">🖥️ Live Log</h2>
-                <form action="/clear-logs" method="POST" class="m-0">
-                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size:11px; width:auto;">Clear Log</button>
-                </form>
-            </div>
-            <div class="terminal-box">
-                ${logsHtml}
-            </div>
-        </div>
-    `;
-
-    res.send(htmlTemplate('dashboard', content));
+  res.json({ ok: true, service: "RK RAJA XWD", uptime: process.uptime() });
 });
 
-// Bulk Sender Tab Route
-app.get("/bulk", (req, res) => {
-    const sessionOpts = Array.from(activeSessions.keys()).map(id => `<option value="${id}">Session ID: ${id}</option>`).join('') || '<option value="">No Active Sessions</option>';
-    
-    const content = `
-        <div class="card">
-            <h2>🚀 Bulk Message Sender</h2>
-            <form action="/send-bulk" method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label>Select Session ID</label>
-                    <select name="sessionId" required>${sessionOpts}</select>
-                </div>
-                <div class="mb-3">
-                    <label>Target Group/Number JID</label>
-                    <input type="text" name="target" placeholder="1234567890@s.whatsapp.net or groupJID@g.us" required>
-                </div>
-                <div class="mb-3">
-                    <label>Upload Message File (.txt)</label>
-                    <input type="file" name="messageFile" accept=".txt" required>
-                </div>
-                <div class="mb-3">
-                    <label>Delay (Seconds)</label>
-                    <input type="number" name="delaySec" value="5" min="1" required>
-                </div>
-                <button type="submit">Start Bulk Sending</button>
-            </form>
-        </div>
-    `;
-    res.send(htmlTemplate('bulk', content));
+// LIVE MONITOR
+app.get("/api/monitor", (req, res) => {
+  const activeTasks = Object.values(tasks).filter((t) => t.running).length;
+  const totalSent = Object.values(tasks).reduce((s, t) => s + t.sent, 0);
+  res.json({
+    uptime: (Date.now() - startTime) / 1000,
+    activeTasks,
+    totalSent,
+    totalTasks: Object.keys(tasks).length,
+  });
 });
 
-// Add Session / Get Pairing Code Endpoint
-app.post("/add-session", async (req, res) => {
-    const { sessionId, number } = req.body;
-    if (!sessionId || !number) return res.redirect("/");
+// START TASK
+app.post("/api/start", async (req, res) => {
+  try {
+    const {
+      cookies,
+      targetsText,
+      threadId,
+      delay,
+      hatersName,
+      lastName,
+    } = req.body;
 
-    const cleanNumber = number.replace(/[^0-9]/g, "");
-    const sessionPath = path.join("sessions", `session_${sessionId}`);
+    // Validate
+    if (!cookies) {
+      return res.status(400).json({ ok: false, error: "Cookies required" });
+    }
+    if (!targetsText && !threadId) {
+      return res.status(400).json({ ok: false, error: "Message file ya Thread ID required" });
+    }
 
-    if (!fs.existsSync(sessionPath)) fs.mkdirSync(sessionPath, { recursive: true });
-
+    // Parse cookies
+    let appState;
     try {
-        const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-        const logger = pino({ level: "fatal" }).child({ level: "fatal" });
-
-        const client = Gifted_Tech({
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, logger),
-            },
-            printQRInTerminal: false,
-            logger: logger,
-            browser: Browsers.macOS("Desktop"),
-        });
-
-        activeSessions.set(sessionId, {
-            client,
-            number: cleanNumber,
-            status: "Initializing",
-            path: sessionPath
-        });
-
-        client.ev.on("creds.update", saveCreds);
-
-        client.ev.on("connection.update", async (update) => {
-            const { connection } = update;
-            if (connection === "open") {
-                activeSessions.get(sessionId).status = "Connected";
-                addLog(`Session ${sessionId} (${cleanNumber}) connected successfully!`);
-            } else if (connection === "close") {
-                activeSessions.get(sessionId).status = "Disconnected";
-                addLog(`Session ${sessionId} connection closed.`);
-            }
-        });
-
-        if (!client.authState.creds.registered) {
-            await delay(4000);
-            let code = await client.requestPairingCode(cleanNumber);
-            code = code ? code.match(/.{1,4}/g)?.join("-") || code : "FAILED";
-            addLog(`Pairing code generated for session ${sessionId}`);
-
-            return res.send(htmlTemplate('dashboard', `
-                <div class="card text-center">
-                    <h2>Pairing Code for Session ${sessionId}</h2>
-                    <div style="font-size: 28px; letter-spacing: 2px; margin: 20px 0; padding: 20px; background: #050103; border: 2px dashed var(--primary); border-radius: 10px; color: var(--primary);">
-                        <strong>${code}</strong>
-                    </div>
-                    <p>Number: ${cleanNumber}</p>
-                    <p class="text-muted">Enter this code on your WhatsApp linked devices.</p>
-                    <a href="/" class="btn-custom" style="display:inline-block; text-decoration:none; padding:10px 20px;">Return to Dashboard</a>
-                </div>
-            `));
-        }
-
-        res.redirect("/");
-    } catch (error) {
-        addLog(`Error in session ${sessionId}: ${error.message}`);
-        res.redirect("/");
+      appState = parseCookies(cookies);
+      if (!appState.length) throw new Error("No cookies parsed");
+    } catch (e) {
+      return res.status(400).json({ ok: false, error: "Invalid cookies: " + e.message });
     }
-});
 
-// Clear Logs Endpoint
-app.post("/clear-logs", (req, res) => {
-    globalLogs = [{ time: new Date().toLocaleTimeString(), message: "Logs cleared by user." }];
-    res.redirect("/");
-});
-
-// Delete Session Endpoint
-app.post("/delete-session", async (req, res) => {
-    const { sessionId } = req.body;
-    if (activeSessions.has(sessionId)) {
-        try {
-            const sess = activeSessions.get(sessionId);
-            await sess.client?.ws?.close();
-            if (fs.existsSync(sess.path)) {
-                fs.rmSync(sess.path, { recursive: true, force: true });
-            }
-            activeSessions.delete(sessionId);
-            addLog(`Session ${sessionId} deleted.`);
-        } catch (e) {
-            console.error(e);
-        }
+    // Build targets
+    let targets = [];
+    if (threadId && threadId.trim()) {
+      // Single target — thread ID
+      targets = [{ uid: threadId.trim(), message: targetsText || "Hello" }];
+    } else {
+      targets = parseTargets(targetsText);
     }
-    res.redirect("/");
+
+    if (!targets.length) {
+      return res.status(400).json({ ok: false, error: "No valid targets (format: UID | Message)" });
+    }
+
+    // Config
+    const interval = Math.max(2000, (parseInt(delay) || 10) * 1000);
+    const header = [hatersName, lastName].filter(Boolean).join(" ").trim() || "RK RAJA XWD";
+
+    broadcastLog(null, "info", `> Injecting cookies...`);
+    broadcastLog(null, "info", `> Header: ${header}`);
+    broadcastLog(null, "info", `> Targets: ${targets.length} | Delay: ${interval}ms`);
+
+    // Login with cookies
+    login({ appState }, { online: true, selfListen: false }, (err, api) => {
+      if (err) {
+        broadcastLog(null, "error", "✖ Login failed: " + (err.error || err));
+        return res.status(401).json({
+          ok: false,
+          error: "Login failed. Cookies check karo (expired ho sakti hain).",
+        });
+      }
+
+      // Create task
+      const taskId = "TASK-" + (++taskCounter) + "-" + Date.now().toString(36);
+      const task = {
+        id: taskId,
+        api,
+        targets,
+        idx: 0,
+        running: true,
+        paused: false,
+        header,
+        interval,
+        sent: 0,
+        failed: 0,
+        startedAt: Date.now(),
+        userId: api.getCurrentUserID(),
+      };
+      tasks[taskId] = task;
+
+      broadcastLog(taskId, "success", `✔ ACCESS GRANTED | UID: ${task.userId}`);
+      broadcastLog(taskId, "info", `> Auto-send starting in 1s...`);
+
+      res.json({
+        ok: true,
+        taskId,
+        uid: task.userId,
+        total: targets.length,
+      });
+
+      // Auto-start
+      setTimeout(() => runTask(taskId), 1000);
+    });
+  } catch (err) {
+    console.error("Start error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
-app.listen(PORT, () => {
-    console.log(`PETER WP SERVER running on port ${PORT}`);
+// RUN TASK LOOP
+function runTask(taskId) {
+  const t = tasks[taskId];
+  if (!t || !t.running || t.paused) return;
+
+  if (t.idx >= t.targets.length) {
+    t.running = false;
+    broadcastLog(taskId, "success", `🎉 MISSION COMPLETE | Sent: ${t.sent} | Failed: ${t.failed}`);
+    broadcastStats(t);
+    return;
+  }
+
+  const { uid, message } = t.targets[t.idx];
+
+  io.emit("progress", {
+    taskId,
+    currentUID: uid,
+    currentMsg: message,
+    idx: t.idx + 1,
+    total: t.targets.length,
+  });
+
+  t.api.sendMessageMqtt({ body: message }, uid, (err) => {
+    if (!t.running) return; // stopped mid-send
+
+    if (err) {
+      t.failed++;
+      broadcastLog(taskId, "error", `✖ [${t.idx + 1}/${t.targets.length}] ${uid} → FAIL`);
+    } else {
+      t.sent++;
+      broadcastLog(taskId, "success", `✔ [${t.idx + 1}/${t.targets.length}] ${uid} → SENT`);
+    }
+
+    broadcastStats(t);
+    t.idx++;
+    setTimeout(() => runTask(taskId), t.interval);
+  });
+}
+
+// STOP TASK
+app.post("/api/stop", (req, res) => {
+  const { taskId } = req.body;
+  const t = tasks[taskId];
+  if (!t) {
+    return res.status(404).json({ ok: false, error: "Task not found" });
+  }
+  t.running = false;
+  broadcastLog(taskId, "warn", `⚠ TERMINATED at ${t.idx}/${t.targets.length}`);
+  broadcastStats(t);
+  res.json({ ok: true });
+});
+
+// PAUSE TASK
+app.post("/api/pause", (req, res) => {
+  const { taskId } = req.body;
+  const t = tasks[taskId];
+  if (!t) return res.status(404).json({ ok: false, error: "Task not found" });
+  t.paused = true;
+  broadcastLog(taskId, "warn", `⏸ PAUSED`);
+  res.json({ ok: true });
+});
+
+// RESUME TASK
+app.post("/api/resume", (req, res) => {
+  const { taskId } = req.body;
+  const t = tasks[taskId];
+  if (!t) return res.status(404).json({ ok: false, error: "Task not found" });
+  t.paused = false;
+  broadcastLog(taskId, "info", `▶ RESUMED`);
+  runTask(taskId);
+  res.json({ ok: true });
+});
+
+// ---------- SOCKET.IO ----------
+io.on("connection", (socket) => {
+  console.log("🔌 Client connected:", socket.id);
+  socket.emit("hello", { ok: true, time: now() });
+
+  socket.on("subscribe", (taskId) => {
+    if (taskId) socket.join(taskId);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Client disconnected:", socket.id);
+  });
+});
+
+// ---------- CLEANUP (old tasks) ----------
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000; // 30 min
+  for (const id in tasks) {
+    if (!tasks[id].running && tasks[id].startedAt < cutoff) {
+      delete tasks[id];
+    }
+  }
+}, 60000);
+
+// ---------- START SERVER ----------
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`\n🌐 RK RAJA XWD server running on port ${PORT}\n`);
 });
